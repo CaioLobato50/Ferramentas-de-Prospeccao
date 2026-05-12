@@ -535,7 +535,7 @@
         <td class="td-phone">${phoneHtml}</td>
         <td class="td-site">${siteHtml}</td>
         <td><span class="lead-chip ${l.chipClass}">${l.badge}</span></td>
-        <td class="td-action"><button onclick="openPitch(${i}, ${JSON.stringify(leads).length > 0 ? `leads[${i}]` : 'null'})">Ver pitch</button></td>
+        <td class="td-action"><button onclick="openPitch(${i})">Ver pitch</button></td>
       </tr>`;
     }).join('');
 
