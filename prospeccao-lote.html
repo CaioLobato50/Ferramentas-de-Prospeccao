@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospecção em Lote — Prestadores de Serviço</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2e;
+    --navy-2: #112240;
+    --navy-3: #1a2f4a;
+    --cream: #EEE8DC;
+    --gold: #C9A96E;
+    --gold-2: #e0c08a;
+    --green: #3aaa6e;
+    --green-bg: rgba(58,170,110,0.1);
+    --yellow: #d4a020;
+    --yellow-bg: rgba(212,160,32,0.1);
+    --red: #e05252;
+    --red-bg: rgba(224,82,82,0.1);
+    --border: rgba(238,232,220,0.08);
+    --border-gold: rgba(201,169,110,0.25);
+    --muted: rgba(238,232,220,0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--navy); color: var(--cream);
+    font-family: 'DM Sans', sans-serif; min-height: 100vh;
+    padding: 48px 20px 80px; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; top: -50%; left: -20%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(201,169,110,0.05) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 960px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .header { margin-bottom: 40px; animation: fadeUp 0.5s ease both; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(201,169,110,0.1); border: 1px solid var(--border-gold);
+    border-radius: 20px; padding: 4px 14px; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+  }
+  .badge::before { content: '◆'; font-size: 8px; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: clamp(28px, 5vw, 42px); line-height: 1.1; margin-bottom: 8px; }
+  h1 span { color: var(--gold); font-style: italic; }
+  .subtitle { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .card {
+    background: var(--navy-2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-label::after { content: ''; flex: 1; height: 1px; background: var(--border-gold); opacity: 0.5; }
+
+  /* API KEY */
+  .api-row { display: flex; gap: 10px; margin-bottom: 8px; }
+  .api-row input {
+    flex: 1; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; color: var(--cream);
+    font-family: monospace; font-size: 13px; outline: none; transition: border-color 0.2s;
+  }
+  .api-row input:focus { border-color: var(--gold); }
+  .api-status { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .api-status.ok { color: var(--green); }
+  .api-link { font-size: 11px; color: var(--gold); text-decoration: none; opacity: 0.7; }
+  .api-link:hover { opacity: 1; }
+
+  /* FILTROS */
+  .filters-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  @media(max-width: 640px) { .filters-grid { grid-template-columns: 1fr; } }
+  .filter-group label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+  .filter-group input, .filter-group select {
+    width: 100%; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--cream);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s;
+    appearance: none;
+  }
+  .filter-group input::placeholder { color: var(--muted); }
+  .filter-group input:focus, .filter-group select:focus { border-color: var(--gold); }
+  .filter-group select option { background: var(--navy-2); color: var(--cream); }
+
+  .filtros-extra { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  .check-group { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--muted); user-select: none; }
+  .check-group input[type=checkbox] { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; }
+  .check-group:hover { color: var(--cream); }
+
+  /* BOTÕES */
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    border: none; border-radius: 10px; padding: 13px 24px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--gold); color: var(--navy); }
+  .btn-primary:hover { background: var(--gold-2); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-outline {
+    background: rgba(201,169,110,0.12); border: 1px solid var(--border-gold);
+    color: var(--gold); padding: 10px 18px; font-size: 12px;
+  }
+  .btn-outline:hover { background: rgba(201,169,110,0.22); }
+  .btn-danger {
+    background: rgba(224,82,82,0.1); border: 1px solid rgba(224,82,82,0.2);
+    color: var(--red); padding: 10px 18px; font-size: 12px;
+  }
+  .btn-danger:hover { background: rgba(224,82,82,0.2); }
+
+  /* PROGRESS */
+  .progress-wrap { display: none; margin-bottom: 20px; animation: fadeUp 0.3s ease; }
+  .progress-wrap.show { display: block; }
+  .progress-bar-bg { background: var(--navy-3); border-radius: 100px; height: 6px; overflow: hidden; margin-bottom: 8px; }
+  .progress-bar-fill { height: 100%; background: var(--gold); border-radius: 100px; transition: width 0.3s ease; }
+  .progress-text { font-size: 12px; color: var(--muted); }
+
+  /* ERROR */
+  .error-box { background: var(--red-bg); border: 1px solid rgba(224,82,82,0.2); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 20px; display: none; }
+  .error-box.show { display: block; animation: fadeUp 0.3s ease; }
+
+  /* RESULTADOS */
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+  }
+  .results-count { font-size: 14px; color: var(--muted); }
+  .results-count strong { color: var(--cream); font-size: 18px; }
+  .export-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* FILTRO RAPIDO */
+  .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .ftab {
+    padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .ftab:hover { border-color: var(--border-gold); color: var(--cream); }
+  .ftab.active { background: rgba(201,169,110,0.15); border-color: var(--border-gold); color: var(--gold); }
+
+  /* TABELA */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  thead { background: var(--navy-3); }
+  thead th {
+    padding: 12px 16px; text-align: left; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: var(--cream); }
+  thead th.sorted { color: var(--gold); }
+  tbody tr { border-top: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(238,232,220,0.03); }
+  tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+  .td-name { font-weight: 600; color: var(--cream); max-width: 180px; }
+  .td-name a { color: var(--cream); text-decoration: none; }
+  .td-name a:hover { color: var(--gold); }
+  .td-category { color: var(--muted); font-size: 11px; max-width: 120px; }
+  .td-rating { font-family: 'DM Serif Display', serif; font-size: 18px; font-weight: bold; }
+  .td-reviews { color: var(--muted); font-size: 11px; }
+  .td-phone a { color: var(--gold); text-decoration: none; font-size: 12px; }
+  .td-phone a:hover { text-decoration: underline; }
+  .td-site { font-size: 12px; }
+  .td-site a { color: var(--gold); text-decoration: none; }
+  .td-site a:hover { text-decoration: underline; }
+  .no-site-tag { color: var(--red); font-size: 11px; font-weight: 600; }
+  .lead-chip { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .chip-quente { background: var(--red-bg); color: var(--red); }
+  .chip-morno { background: var(--yellow-bg); color: var(--yellow); }
+  .chip-frio { background: var(--green-bg); color: var(--green); }
+  .chip-top { background: rgba(201,169,110,0.12); color: var(--gold); }
+  .td-action button {
+    background: transparent; border: 1px solid var(--border-gold);
+    border-radius: 6px; padding: 4px 10px; color: var(--gold);
+    font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .td-action button:hover { background: rgba(201,169,110,0.1); }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state .e-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* MODAL PITCH */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(13,27,46,0.85); z-index: 100;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; animation: fadeUp 0.25s ease; }
+  .modal {
+    background: var(--navy-2); border: 1px solid var(--border-gold);
+    border-radius: 16px; padding: 32px; max-width: 560px; width: 100%;
+    position: relative; max-height: 90vh; overflow-y: auto;
+  }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .modal-pitch {
+    background: var(--navy-3); border-left: 3px solid var(--gold);
+    border-radius: 0 10px 10px 0; padding: 16px 18px;
+    font-size: 14px; line-height: 1.75; white-space: pre-wrap; color: var(--cream);
+    margin-bottom: 16px;
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 20px;
+    background: transparent; border: none; color: var(--muted);
+    font-size: 20px; cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover { color: var(--cream); }
+  .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">Prospecção em Lote</div>
+    <h1>Leads <span>Finder</span></h1>
+    <p class="subtitle">Busca prestadores de serviço por segmento e cidade, qualifica automaticamente e exporta sua lista de prospecção.</p>
+  </div>
+
+  <!-- API KEY -->
+  <div class="card" style="animation-delay:0s">
+    <div class="card-label">🔑 Google Places API Key</div>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui..." autocomplete="off">
+      <button class="btn btn-outline" onclick="saveApiKey()">Salvar</button>
+    </div>
+    <div class="api-status" id="apiStatus"></div>
+    <a class="api-link" href="https://console.cloud.google.com/apis/credentials" target="_blank">→ Criar chave no Google Cloud Console</a>
+  </div>
+
+  <!-- BUSCA -->
+  <div class="card" style="animation-delay:0.08s">
+    <div class="card-label">🔍 Configurar Busca</div>
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Segmento / Nicho</label>
+        <select id="segmentoSelect" onchange="updateCustom()">
+          <option value="">-- Selecione --</option>
+          <option value="eletricista">Eletricista</option>
+          <option value="encanador">Encanador</option>
+          <option value="montador de móveis">Montador de Móveis</option>
+          <option value="pintor residencial">Pintor Residencial</option>
+          <option value="pedreiro">Pedreiro / Construção</option>
+          <option value="marmoraria">Marmoraria</option>
+          <option value="vidraçaria">Vidraçaria</option>
+          <option value="serralheria">Serralheria</option>
+          <option value="dedetizadora">Dedetizadora</option>
+          <option value="chaveiro">Chaveiro</option>
+          <option value="ar condicionado instalação">Ar Condicionado</option>
+          <option value="serviço de limpeza">Limpeza / Faxina</option>
+          <option value="manicure">Manicure / Nail Designer</option>
+          <option value="cabeleireiro">Cabeleireiro / Barbearia</option>
+          <option value="esteticista">Esteticista</option>
+          <option value="personal trainer">Personal Trainer</option>
+          <option value="fotógrafo">Fotógrafo</option>
+          <option value="outro">Outro (digitar abaixo)</option>
+        </select>
+      </div>
+      <div class="filter-group" id="customWrap" style="display:none">
+        <label>Segmento personalizado</label>
+        <input type="text" id="customSegmento" placeholder="Ex: instalador de câmeras">
+      </div>
+      <div class="filter-group">
+        <label>Cidade</label>
+        <input type="text" id="cidadeInput" placeholder="Ex: Curitiba" value="Curitiba">
+      </div>
+      <div class="filter-group">
+        <label>Bairro / Região (opcional)</label>
+        <input type="text" id="bairroInput" placeholder="Ex: Centro, Batel...">
+      </div>
+    </div>
+    <div class="filtros-extra">
+      <label class="check-group">
+        <input type="checkbox" id="filtroSemSite"> Apenas sem site
+      </label>
+      <label class="check-group">
+        <input type="checkbox" id="filtroNotaBaixa"> Apenas nota abaixo de 4.2
+      </label>
+      <label class="check-group">
+        <input type="checkbox" id="filtroSemNota"> Incluir sem nota
+      </label>
+    </div>
+    <div style="margin-top: 16px">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="searchBtn" onclick="startSearch()">
+          🔍 <span id="btnText">Buscar Leads</span>
+        </button>
+        <button class="btn btn-danger" id="clearBtn" style="display:none" onclick="clearResults()">
+          🗑 Limpar lista
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESSO -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-text" id="progressText">Iniciando busca...</div>
+  </div>
+
+  <!-- ERRO -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- RESULTADOS -->
+  <div id="resultsSection" style="display:none">
+    <div class="results-header">
+      <div class="results-count">
+        <strong id="totalCount">0</strong> leads encontrados
+        <span id="filteredNote" style="margin-left:8px;font-size:12px;"></span>
+      </div>
+      <div class="export-row">
+        <button class="btn btn-outline" onclick="exportCSV()">📥 Exportar CSV</button>
+      </div>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="ftab active" onclick="filterTab('todos', this)">Todos</button>
+      <button class="ftab" onclick="filterTab('quente', this)">🔥 Quentes</button>
+      <button class="ftab" onclick="filterTab('morno', this)">🟡 Mornos</button>
+      <button class="ftab" onclick="filterTab('frio', this)">💚 Qualificados</button>
+      <button class="ftab" onclick="filterTab('top', this)">⭐ Top</button>
+      <button class="ftab" onclick="filterTab('semsite', this)">⚠ Sem site</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="leadsTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')">Negócio ↕</th>
+            <th onclick="sortBy('category')">Categoria ↕</th>
+            <th onclick="sortBy('rating')">Nota ↕</th>
+            <th>Avaliações</th>
+            <th>Telefone</th>
+            <th>Site</th>
+            <th onclick="sortBy('lead')">Lead ↕</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL PITCH -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="modal-pitch" id="modalPitch"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="copyModalPitch()">📋 Copiar mensagem</button>
+      <button class="btn btn-outline" id="waBtn" onclick="openWA()" style="display:none">💬 Abrir WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let allLeads = [];
+  let activeFilter = 'todos';
+  let sortKey = 'rating';
+  let sortDir = -1;
+  let currentWALink = '';
+
+  // ─── API KEY ───────────────────────────────────────────
+  function saveApiKey() {
+    const k = document.getElementById('apiKeyInput').value.trim();
+    if (!k) { showApiStatus('Cole a chave antes de salvar', false); return; }
+    localStorage.setItem('gbp_api_key', k);
+    showApiStatus('✓ Chave salva', true);
+  }
+  function loadApiKey() {
+    const k = localStorage.getItem('gbp_api_key');
+    if (k) { document.getElementById('apiKeyInput').value = k; showApiStatus('✓ Chave carregada', true); }
+  }
+  function showApiStatus(msg, ok) {
+    const el = document.getElementById('apiStatus');
+    el.textContent = msg; el.className = 'api-status' + (ok ? ' ok' : '');
+  }
+  function getApiKey() { return localStorage.getItem('gbp_api_key') || document.getElementById('apiKeyInput').value.trim(); }
+
+  function updateCustom() {
+    const val = document.getElementById('segmentoSelect').value;
+    document.getElementById('customWrap').style.display = val === 'outro' ? 'block' : 'none';
+  }
+
+  // ─── SEARCH ───────────────────────────────────────────
+  async function startSearch() {
+    const apiKey = getApiKey();
+    if (!apiKey) { showError('Cole e salve sua Google Places API Key.'); return; }
+
+    const segSelect = document.getElementById('segmentoSelect').value;
+    const segCustom = document.getElementById('customSegmento').value.trim();
+    const segmento = segSelect === 'outro' ? segCustom : segSelect;
+    const cidade = document.getElementById('cidadeInput').value.trim();
+    const bairro = document.getElementById('bairroInput').value.trim();
+
+    if (!segmento) { showError('Selecione ou digite um segmento.'); return; }
+    if (!cidade) { showError('Digite a cidade.'); return; }
+
+    const query = [segmento, bairro, cidade, 'Brasil'].filter(Boolean).join(' ');
+
+    hideError();
+    setLoading(true);
+    showProgress(0, `Buscando "${segmento}" em ${cidade}...`);
+    allLeads = [];
+
+    try {
+      showProgress(30, `Buscando "${segmento}" em ${cidade}...`);
+
+      const body = { textQuery: query, languageCode: 'pt-BR', regionCode: 'BR' };
+
+      const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.displayName,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.businessStatus'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error?.message || 'Erro na API.');
+      if (!data.places?.length) throw new Error('Nenhum resultado encontrado. Tente outro segmento ou cidade.');
+
+      showProgress(80, 'Processando leads...');
+      data.places.forEach(p => allLeads.push(parseLead(p)));
+
+      showProgress(100, `${allLeads.length} leads encontrados!`);
+      await sleep(500);
+      hideProgress();
+      applyFiltersAndRender();
+
+    } catch(err) {
+      hideProgress();
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function parseLead(p) {
+    const name = p.displayName?.text || '';
+    const rating = p.rating || null;
+    const totalRatings = p.userRatingCount || 0;
+    const category = p.primaryTypeDisplayName?.text || '';
+    const address = p.formattedAddress || '';
+    const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || '';
+    const website = p.websiteUri || '';
+    const mapsUri = p.googleMapsUri || '';
+    const status = p.businessStatus || '';
+
+    const { badge, badgeClass, chipClass, pitch } = analyzeRating(rating, totalRatings, name);
+
+    return { name, rating, totalRatings, category, address, phone, website, mapsUri, status, badge, badgeClass, chipClass, pitch };
+  }
+
+  function applyFiltersAndRender() {
+    const filtroSemSite = document.getElementById('filtroSemSite').checked;
+    const filtroNotaBaixa = document.getElementById('filtroNotaBaixa').checked;
+    const filtroSemNota = document.getElementById('filtroSemNota').checked;
+
+    let leads = [...allLeads];
+
+    // Filtros de checkbox
+    if (filtroSemSite) leads = leads.filter(l => !l.website);
+    if (filtroNotaBaixa) leads = leads.filter(l => l.rating && l.rating < 4.2);
+    if (!filtroSemNota) leads = leads; // incluir ou não sem nota — por padrão inclui tudo
+
+    // Filtro de tab
+    if (activeFilter === 'quente') leads = leads.filter(l => l.badgeClass === 'badge-quente');
+    else if (activeFilter === 'morno') leads = leads.filter(l => l.badgeClass === 'badge-morno');
+    else if (activeFilter === 'frio') leads = leads.filter(l => l.badgeClass === 'badge-frio');
+    else if (activeFilter === 'top') leads = leads.filter(l => l.badge.includes('Top'));
+    else if (activeFilter === 'semsite') leads = leads.filter(l => !l.website);
+
+    // Sort
+    leads.sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (sortKey === 'rating') { va = va || 0; vb = vb || 0; }
+      if (sortKey === 'name' || sortKey === 'category' || sortKey === 'lead') { va = va || ''; vb = vb || ''; }
+      if (va < vb) return sortDir;
+      if (va > vb) return -sortDir;
+      return 0;
+    });
+
+    document.getElementById('totalCount').textContent = allLeads.length;
+    const filtered = leads.length !== allLeads.length ? ` (${leads.length} exibidos)` : '';
+    document.getElementById('filteredNote').textContent = filtered;
+
+    renderTable(leads);
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('clearBtn').style.display = 'inline-flex';
+  }
+
+  function renderTable(leads) {
+    const tbody = document.getElementById('leadsBody');
+    if (!leads.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="e-icon">🔍</div><p>Nenhum lead encontrado com esses filtros.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = leads.map((l, i) => {
+      const phoneHtml = l.phone
+        ? `<a href="https://wa.me/55${l.phone.replace(/\D/g,'')}" target="_blank">${l.phone}</a>`
+        : '<span style="color:var(--muted);font-size:11px;">—</span>';
+      const siteHtml = l.website
+        ? `<a href="${l.website}" target="_blank">${l.website.replace(/https?:\/\/(www\.)?/,'').split('/')[0]}</a>`
+        : '<span class="no-site-tag">⚠ Sem site</span>';
+      const ratingHtml = l.rating
+        ? `<span class="td-rating" style="color:${ratingColor(l.rating)}">${l.rating.toFixed(1)}</span>`
+        : '<span style="color:var(--muted)">—</span>';
+      const nameHtml = l.mapsUri
+        ? `<a href="${l.mapsUri}" target="_blank">${l.name}</a>`
+        : l.name;
+
+      return `<tr>
+        <td class="td-name">${nameHtml}</td>
+        <td class="td-category">${l.category}</td>
+        <td class="td-rating">${ratingHtml}<div class="td-reviews">${l.totalRatings > 0 ? l.totalRatings + ' avaliações' : ''}</div></td>
+        <td></td>
+        <td class="td-phone">${phoneHtml}</td>
+        <td class="td-site">${siteHtml}</td>
+        <td><span class="lead-chip ${l.chipClass}">${l.badge}</span></td>
+        <td class="td-action"><button onclick="openPitch(${i}, ${JSON.stringify(leads).length > 0 ? `leads[${i}]` : 'null'})">Ver pitch</button></td>
+      </tr>`;
+    }).join('');
+
+    // Guarda leads filtrados pro pitch
+    window._currentLeads = leads;
+  }
+
+  function openPitch(i) {
+    const l = window._currentLeads[i];
+    if (!l) return;
+    document.getElementById('modalTitle').textContent = l.name;
+    document.getElementById('modalSub').textContent = l.category + (l.address ? ' • ' + l.address : '');
+    document.getElementById('modalPitch').textContent = l.pitch;
+
+    if (l.phone) {
+      currentWALink = `https://wa.me/55${l.phone.replace(/\D/g,'')}`;
+      document.getElementById('waBtn').style.display = 'inline-flex';
+    } else {
+      document.getElementById('waBtn').style.display = 'none';
+    }
+
+    document.getElementById('modalOverlay').className = 'modal-overlay show';
+  }
+
+  function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalDirect(); }
+  function closeModalDirect() { document.getElementById('modalOverlay').className = 'modal-overlay'; }
+  function openWA() { window.open(currentWALink, '_blank'); }
+  function copyModalPitch() {
+    navigator.clipboard.writeText(document.getElementById('modalPitch').textContent).then(() => {
+      const btn = event.target;
+      btn.textContent = '✓ Copiado!';
+      setTimeout(() => btn.textContent = '📋 Copiar mensagem', 2000);
+    });
+  }
+
+  function filterTab(tab, el) {
+    activeFilter = tab;
+    document.querySelectorAll('.ftab').forEach(t => t.className = 'ftab');
+    el.className = 'ftab active';
+    applyFiltersAndRender();
+  }
+
+  function sortBy(key) {
+    if (sortKey === key) sortDir = -sortDir;
+    else { sortKey = key; sortDir = -1; }
+    document.querySelectorAll('thead th').forEach(th => th.className = '');
+    event.target.className = 'sorted';
+    applyFiltersAndRender();
+  }
+
+  function exportCSV() {
+    const leads = window._currentLeads || allLeads;
+    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação']];
+    leads.forEach(l => {
+      rows.push([
+        l.name, l.category,
+        l.rating ? l.rating.toFixed(1) : '',
+        l.totalRatings,
+        l.phone, l.website, l.address, l.mapsUri, l.badge
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `leads_${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearResults() {
+    allLeads = []; window._currentLeads = [];
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('clearBtn').style.display = 'none';
+  }
+
+  // ─── HELPERS ──────────────────────────────────────────
+  function ratingColor(r) {
+    if (!r) return 'var(--muted)';
+    if (r < 3.5) return '#e05252';
+    if (r < 4.0) return '#d4a020';
+    if (r < 4.5) return '#C9A96E';
+    return '#3aaa6e';
+  }
+
+  function analyzeRating(rating, totalRatings, name) {
+    if (!rating) return {
+      badge: '⚡ Sem presença', badgeClass: 'badge-quente', chipClass: 'chip-quente',
+      pitch: `Oi, tudo bem? Vi que o ${name} ainda não tem avaliações no Google Meu Negócio.\n\nHoje em dia, quando alguém precisa de um serviço, a primeira coisa que faz é pesquisar no Google. Sem nota e sem avaliações, você fica invisível pra essa galera.\n\nTrabalho com sites e gestão de tráfego pago pra prestadores de serviço aqui em Curitiba. Posso te mostrar como resolver isso de forma rápida?\n\nTem 10 minutos pra bater um papo?`
+    };
+    if (rating < 3.5) return {
+      badge: '🔥 Quente', badgeClass: 'badge-quente', chipClass: 'chip-quente',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google com ${totalRatings} avaliações.\n\nNota abaixo de 4 afasta clientes antes mesmo de entrarem em contato. A maioria das pessoas filtra por avaliação antes de ligar.\n\nTrabalho com prestadores de serviço aqui em Curitiba ajudando a melhorar presença online e atrair mais clientes com anúncios.\n\nPosso te mostrar um diagnóstico rápido e gratuito? Sem compromisso nenhum.`
+    };
+    if (rating < 4.2) return {
+      badge: '🟡 Morno', badgeClass: 'badge-morno', chipClass: 'chip-morno',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google com ${totalRatings} avaliações.\n\nTá indo bem, mas tem margem pra chegar nos 4.5+, onde os negócios aparecem mais nas buscas e atraem mais clientes.\n\nTrabalho com gestão de tráfego pago e sites pra prestadores de serviço aqui em Curitiba.\n\nTem interesse em ver como isso funcionaria pro seu negócio?`
+    };
+    if (rating < 4.6) return {
+      badge: '💚 Qualificado', badgeClass: 'badge-frio', chipClass: 'chip-frio',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google — tá bem avaliado!\n\nPra quem tem uma reputação boa assim, anunciar no Google e Instagram costuma dar retorno muito acima da média, porque já tem a prova social pra converter.\n\nTrabalho com gestão de tráfego pago pra prestadores de serviço aqui em Curitiba. Posso fazer uma análise rápida do potencial do seu negócio?`
+    };
+    return {
+      badge: '⭐ Top', badgeClass: 'badge-frio', chipClass: 'chip-top',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google — impressionante!\n\nCom uma reputação assim, investir em anúncios pagos é quase garantia de retorno alto, porque a taxa de conversão é muito maior quando o negócio já tem credibilidade online.\n\nTrabalho com gestão de tráfego pago aqui em Curitiba. Posso te mostrar quanto daria pra crescer o faturamento com anúncios?`
+    };
+  }
+
+  function setLoading(on) {
+    document.getElementById('searchBtn').disabled = on;
+    document.getElementById('btnText').textContent = on ? 'Buscando...' : 'Buscar Leads';
+  }
+  function showProgress(pct, text) {
+    document.getElementById('progressWrap').className = 'progress-wrap show';
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = text;
+  }
+  function hideProgress() { document.getElementById('progressWrap').className = 'progress-wrap'; }
+  function showError(msg) { const el = document.getElementById('errorBox'); el.textContent = msg; el.className = 'error-box show'; }
+  function hideError() { document.getElementById('errorBox').className = 'error-box'; }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  loadApiKey();
+</script>
+</body>
+</html>

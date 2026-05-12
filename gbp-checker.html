@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GBP Checker — Prospecção</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2e;
+    --navy-2: #112240;
+    --navy-3: #1a2f4a;
+    --cream: #EEE8DC;
+    --gold: #C9A96E;
+    --gold-2: #e0c08a;
+    --green: #3aaa6e;
+    --green-bg: rgba(58,170,110,0.1);
+    --yellow: #d4a020;
+    --yellow-bg: rgba(212,160,32,0.1);
+    --red: #e05252;
+    --red-bg: rgba(224,82,82,0.1);
+    --border: rgba(238,232,220,0.08);
+    --border-gold: rgba(201,169,110,0.25);
+    --muted: rgba(238,232,220,0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--navy); color: var(--cream);
+    font-family: 'DM Sans', sans-serif; min-height: 100vh;
+    padding: 48px 20px 80px; position: relative; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; top: -50%; left: -20%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(201,169,110,0.06) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+
+  .header { margin-bottom: 48px; animation: fadeUp 0.5s ease both; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(201,169,110,0.1); border: 1px solid var(--border-gold);
+    border-radius: 20px; padding: 4px 14px; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+  }
+  .badge::before { content: '◆'; font-size: 8px; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: clamp(32px, 6vw, 48px); line-height: 1.1; margin-bottom: 10px; }
+  h1 span { color: var(--gold); font-style: italic; }
+  .subtitle { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .card {
+    background: var(--navy-2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-label::after { content: ''; flex: 1; height: 1px; background: var(--border-gold); opacity: 0.5; }
+
+  .api-row { display: flex; gap: 10px; margin-bottom: 8px; }
+  .api-row input {
+    flex: 1; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; color: var(--cream);
+    font-family: monospace; font-size: 13px; outline: none; transition: border-color 0.2s;
+  }
+  .api-row input:focus { border-color: var(--gold); }
+  .api-status { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .api-status.ok { color: var(--green); }
+  .api-link { font-size: 11px; color: var(--gold); text-decoration: none; opacity: 0.7; transition: opacity 0.2s; }
+  .api-link:hover { opacity: 1; }
+
+  .search-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .search-row input {
+    flex: 1; min-width: 200px; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; color: var(--cream);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s;
+  }
+  .search-row input::placeholder { color: var(--muted); }
+  .search-row input:focus { border-color: var(--gold); }
+  .search-hint { font-size: 12px; color: var(--muted); }
+  .search-hint span { color: var(--gold); opacity: 0.8; }
+
+  .btn {
+    border: none; border-radius: 10px; padding: 14px 24px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--gold); color: var(--navy); }
+  .btn-primary:hover { background: var(--gold-2); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-outline {
+    background: rgba(201,169,110,0.15); border: 1px solid var(--border-gold);
+    color: var(--gold); padding: 10px 18px; font-size: 12px;
+  }
+  .btn-outline:hover { background: rgba(201,169,110,0.25); }
+  .btn-ghost {
+    background: transparent; border: 1px dashed var(--border-gold);
+    color: var(--gold); width: 100%; justify-content: center;
+    padding: 14px; font-size: 13px; opacity: 0.7; border-radius: 10px;
+    margin-top: 16px;
+  }
+  .btn-ghost:hover { opacity: 1; background: rgba(201,169,110,0.05); }
+  .btn-copy-sm {
+    background: transparent; border: 1px solid var(--border-gold);
+    border-radius: 8px; padding: 8px 18px; color: var(--gold);
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin-top: 12px;
+  }
+  .btn-copy-sm:hover { background: rgba(201,169,110,0.1); }
+  .btn-copy-sm.copied { color: var(--green); border-color: rgba(58,170,110,0.3); }
+
+  .error-box {
+    background: var(--red-bg); border: 1px solid rgba(224,82,82,0.2);
+    border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--red);
+    margin-bottom: 20px; display: none;
+  }
+  .error-box.show { display: block; animation: fadeUp 0.3s ease; }
+
+  .spinner-wrap { display: none; text-align: center; padding: 40px; }
+  .spinner-wrap.show { display: block; }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--gold); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  .spinner-text { font-size: 13px; color: var(--muted); }
+
+  .result-wrap { display: none; }
+  .result-wrap.show { display: block; animation: fadeUp 0.4s ease; }
+
+  /* TOP */
+  .result-top { padding: 0 0 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .biz-name { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1.2; margin-bottom: 4px; }
+  .biz-category { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
+  .score-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .score-big { display: flex; align-items: baseline; gap: 6px; }
+  .score-num { font-family: 'DM Serif Display', serif; font-size: 56px; line-height: 1; }
+  .score-max { font-size: 18px; color: var(--muted); }
+  .score-meta { margin-top: 2px; }
+  .stars { font-size: 20px; letter-spacing: 2px; }
+  .reviews-ct { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .lead-badge { padding: 8px 18px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-left: auto; }
+  .badge-quente { background: var(--red-bg); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+  .badge-morno { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(212,160,32,0.2); }
+  .badge-frio { background: var(--green-bg); color: var(--green); border: 1px solid rgba(58,170,110,0.2); }
+
+  /* INFO GRID */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media(max-width: 520px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-item { background: var(--navy-3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .info-item.full { grid-column: 1 / -1; }
+  .i-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .i-value { font-size: 13px; color: var(--cream); line-height: 1.5; word-break: break-word; }
+  .i-value a { color: var(--gold); text-decoration: none; }
+  .i-value a:hover { text-decoration: underline; }
+  .tag-open { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .tag-open.sim { background: var(--green-bg); color: var(--green); }
+  .tag-open.nao { background: var(--red-bg); color: var(--red); }
+  .no-site { color: var(--red); font-size: 12px; }
+
+  /* HORÁRIOS */
+  .hours-list { list-style: none; }
+  .hours-list li { font-size: 12px; color: var(--muted); padding: 3px 0; }
+  .hours-list li strong { color: var(--cream); min-width: 100px; display: inline-block; }
+
+  /* PITCH */
+  .pitch-box {
+    background: var(--navy-3); border: 1px solid var(--border);
+    border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0;
+    padding: 18px 20px; font-size: 14px; line-height: 1.75; color: var(--cream); white-space: pre-wrap;
+  }
+
+  /* STRATEGY */
+  .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width: 480px) { .strategy-grid { grid-template-columns: 1fr; } }
+  .s-item { background: var(--navy-3); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .s-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .s-value { font-size: 13px; color: var(--cream); line-height: 1.5; }
+  .s-value strong { color: var(--gold); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">Prospecção Ativa</div>
+    <h1>GBP <span>Checker</span></h1>
+    <p class="subtitle">Pesquise a nota do Google Meu Negócio do seu lead antes de abordar. Chegue na conversa com dados reais.</p>
+  </div>
+
+  <!-- API KEY -->
+  <div class="card" style="animation-delay:0s">
+    <div class="card-label">🔑 Google Places API Key</div>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui..." autocomplete="off">
+      <button class="btn btn-outline" onclick="saveApiKey()">Salvar</button>
+    </div>
+    <div class="api-status" id="apiStatus"></div>
+    <a class="api-link" href="https://console.cloud.google.com/apis/credentials" target="_blank">→ Criar chave no Google Cloud Console</a>
+  </div>
+
+  <!-- BUSCA -->
+  <div class="card" style="animation-delay:0.08s">
+    <div class="card-label">🔍 Nome do Negócio + Cidade</div>
+    <div class="search-row">
+      <input type="text" id="businessInput" placeholder="Ex: Elétrica do João Curitiba" onkeydown="if(event.key==='Enter')searchBusiness()">
+      <button class="btn btn-primary" id="searchBtn" onclick="searchBusiness()">
+        <span>🔍</span><span id="btnText">Buscar</span>
+      </button>
+    </div>
+    <div class="search-hint">Dica: quanto mais específico, melhor. Ex: <span>"Encanador Curitiba Batel"</span></div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="spinner-wrap" id="spinnerWrap">
+    <div class="spinner"></div>
+    <div class="spinner-text">Buscando no Google Meu Negócio...</div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="result-wrap" id="resultWrap">
+
+    <!-- NOTA -->
+    <div class="card">
+      <div class="result-top">
+        <div class="biz-name" id="bizName"></div>
+        <div class="biz-category" id="bizCategory"></div>
+        <div class="score-row">
+          <div class="score-big">
+            <span class="score-num" id="scoreNum"></span>
+            <span class="score-max">/ 5</span>
+          </div>
+          <div class="score-meta">
+            <div class="stars" id="starsEl"></div>
+            <div class="reviews-ct" id="reviewsCt"></div>
+          </div>
+          <div class="lead-badge" id="leadBadge"></div>
+        </div>
+      </div>
+
+      <!-- INFOS -->
+      <div class="card-label">📋 Informações do Negócio</div>
+      <div class="info-grid" id="infoGrid"></div>
+    </div>
+
+    <!-- HORÁRIOS -->
+    <div class="card" id="hoursCard" style="display:none">
+      <div class="card-label">🕐 Horário de Funcionamento</div>
+      <ul class="hours-list" id="hoursList"></ul>
+    </div>
+
+    <!-- PITCH -->
+    <div class="card">
+      <div class="card-label">💬 Argumento de Abordagem</div>
+      <div class="pitch-box" id="pitchBox"></div>
+      <button class="btn-copy-sm" id="copyBtn" onclick="copyPitch()">Copiar mensagem</button>
+    </div>
+
+    <!-- ESTRATÉGIA -->
+    <div class="card">
+      <div class="card-label">🎯 Estratégia de Entrada</div>
+      <div class="strategy-grid" id="strategyGrid"></div>
+    </div>
+
+  </div>
+
+  <button class="btn btn-ghost" id="btnNova" style="display:none" onclick="resetSearch()">+ Nova busca</button>
+
+</div>
+<script>
+  function saveApiKey() {
+    const k = document.getElementById('apiKeyInput').value.trim();
+    if (!k) { showApiStatus('Cole a chave antes de salvar', false); return; }
+    localStorage.setItem('gbp_api_key', k);
+    showApiStatus('✓ Chave salva', true);
+  }
+  function loadApiKey() {
+    const k = localStorage.getItem('gbp_api_key');
+    if (k) { document.getElementById('apiKeyInput').value = k; showApiStatus('✓ Chave carregada', true); }
+  }
+  function showApiStatus(msg, ok) {
+    const el = document.getElementById('apiStatus');
+    el.textContent = msg; el.className = 'api-status' + (ok ? ' ok' : '');
+  }
+  function getApiKey() { return localStorage.getItem('gbp_api_key') || document.getElementById('apiKeyInput').value.trim(); }
+
+  async function searchBusiness() {
+    const query = document.getElementById('businessInput').value.trim();
+    const apiKey = getApiKey();
+    if (!apiKey) { showError('Cole e salve sua Google Places API Key antes de buscar.'); return; }
+    if (!query) { showError('Digite o nome do negócio para buscar.'); return; }
+    hideError(); hideResult(); setLoading(true);
+    try {
+      const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.displayName,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.currentOpeningHours,places.regularOpeningHours,places.businessStatus,places.googleMapsUri,places.types'
+        },
+        body: JSON.stringify({ textQuery: query, languageCode: 'pt-BR', regionCode: 'BR' })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error?.message || 'Erro na API do Google.');
+      if (!data.places?.length) throw new Error('Nenhum resultado encontrado. Tente com o nome mais específico.');
+      showResult(data.places[0]);
+    } catch(err) { showError(err.message); }
+    finally { setLoading(false); }
+  }
+
+  function showResult(p) {
+    const name = p.displayName?.text || 'Negócio';
+    const rating = p.rating || null;
+    const totalRatings = p.userRatingCount || 0;
+    const category = p.primaryTypeDisplayName?.text || '';
+    const address = p.formattedAddress || null;
+    const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || null;
+    const website = p.websiteUri || null;
+    const mapsUri = p.googleMapsUri || null;
+    const isOpen = p.currentOpeningHours?.openNow;
+    const hours = p.regularOpeningHours?.weekdayDescriptions || p.currentOpeningHours?.weekdayDescriptions || [];
+    const status = p.businessStatus || null;
+
+    document.getElementById('bizName').textContent = name;
+    document.getElementById('bizCategory').textContent = category;
+
+    if (rating) {
+      document.getElementById('scoreNum').textContent = rating.toFixed(1);
+      document.getElementById('scoreNum').style.color = ratingColor(rating);
+      document.getElementById('starsEl').textContent = renderStars(rating);
+      document.getElementById('reviewsCt').textContent = totalRatings > 0 ? `${totalRatings} avaliações no Google` : 'Sem avaliações ainda';
+    } else {
+      document.getElementById('scoreNum').textContent = '—';
+      document.getElementById('scoreNum').style.color = 'var(--muted)';
+      document.getElementById('reviewsCt').textContent = 'Sem nota no Google';
+    }
+
+    const { badge, badgeClass, pitch, strategy } = analyzeRating(rating, totalRatings, name);
+    const badgeEl = document.getElementById('leadBadge');
+    badgeEl.textContent = badge; badgeEl.className = 'lead-badge ' + badgeClass;
+
+    // Info grid
+    const items = [];
+    if (address) {
+      const val = mapsUri ? `<a href="${mapsUri}" target="_blank">${address}</a>` : address;
+      items.push({ label: 'Endereço', value: val, full: true });
+    }
+    if (phone) {
+      const digits = phone.replace(/\D/g, '');
+      const waNum = digits.startsWith('55') ? digits : '55' + digits;
+      items.push({ label: 'Telefone / WhatsApp', value: `<a href="https://wa.me/${waNum}" target="_blank">${phone}</a>` });
+    } else {
+      items.push({ label: 'Telefone', value: '<span style="color:var(--muted);font-size:12px;">Não cadastrado</span>' });
+    }
+    if (website) {
+      const domain = website.replace(/https?:\/\/(www\.)?/, '').split('/')[0];
+      items.push({ label: 'Site', value: `<a href="${website}" target="_blank">${domain}</a>` });
+    } else {
+      items.push({ label: 'Site', value: '<span class="no-site">⚠ Sem site cadastrado</span>' });
+    }
+    if (mapsUri) items.push({ label: 'Google Maps', value: `<a href="${mapsUri}" target="_blank">Ver perfil completo →</a>` });
+    if (status) {
+      const sm = { OPERATIONAL: 'Em operação', CLOSED_TEMPORARILY: 'Fechado temporariamente', CLOSED_PERMANENTLY: 'Fechado permanentemente' };
+      items.push({ label: 'Status do negócio', value: sm[status] || status });
+    }
+    if (isOpen !== undefined && isOpen !== null) {
+      items.push({ label: 'Situação agora', value: `<span class="tag-open ${isOpen ? 'sim' : 'nao'}">${isOpen ? '● Aberto agora' : '● Fechado agora'}</span>` });
+    }
+
+    document.getElementById('infoGrid').innerHTML = items.map(it =>
+      `<div class="info-item ${it.full ? 'full' : ''}"><div class="i-label">${it.label}</div><div class="i-value">${it.value}</div></div>`
+    ).join('');
+
+    // Horários
+    if (hours.length > 0) {
+      document.getElementById('hoursCard').style.display = 'block';
+      document.getElementById('hoursList').innerHTML = hours.map(h => {
+        const idx = h.indexOf(':');
+        const day = h.substring(0, idx);
+        const time = h.substring(idx + 1).trim();
+        return `<li><strong>${day}:</strong> ${time}</li>`;
+      }).join('');
+    } else {
+      document.getElementById('hoursCard').style.display = 'none';
+    }
+
+    document.getElementById('pitchBox').textContent = pitch;
+    document.getElementById('strategyGrid').innerHTML = strategy.map(s =>
+      `<div class="s-item"><div class="s-label">${s.label}</div><div class="s-value">${s.value}</div></div>`
+    ).join('');
+
+    document.getElementById('resultWrap').className = 'result-wrap show';
+    document.getElementById('btnNova').style.display = 'flex';
+  }
+
+  function ratingColor(r) {
+    if (r < 3.5) return '#e05252';
+    if (r < 4.0) return '#d4a020';
+    if (r < 4.5) return '#C9A96E';
+    return '#3aaa6e';
+  }
+  function renderStars(r) {
+    const f = Math.floor(r), h = r % 1 >= 0.5 ? 1 : 0;
+    return '★'.repeat(f) + (h ? '½' : '') + '☆'.repeat(5 - f - h);
+  }
+
+  function analyzeRating(rating, totalRatings, name) {
+    if (!rating) return {
+      badge: '⚡ Sem presença', badgeClass: 'badge-quente',
+      pitch: `Oi, tudo bem? Vi que o ${name} ainda não tem avaliações no Google Meu Negócio.\n\nHoje em dia, quando alguém precisa de um serviço, a primeira coisa que faz é pesquisar no Google. Sem nota e sem avaliações, você fica invisível pra essa galera.\n\nTrabalho com sites e gestão de tráfego pago pra prestadores de serviço aqui em Curitiba. Posso te mostrar como resolver isso de forma rápida e sem complicação.\n\nTem 10 minutos pra eu te mostrar o que dá pra fazer?`,
+      strategy: [
+        { label: 'Dor principal', value: 'Invisível no Google, depende 100% de indicação' },
+        { label: 'Argumento de entrada', value: 'Mostrar como clientes te encontram (ou não) online' },
+        { label: 'Oferta ideal', value: '<strong>Site + Gestão de Tráfego</strong> — combo completo' },
+        { label: 'Tom da abordagem', value: 'Consultivo, mostrar o problema antes de falar de preço' }
+      ]
+    };
+    if (rating < 3.5) return {
+      badge: '🔥 Lead Quente', badgeClass: 'badge-quente',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google com ${totalRatings} avaliações.\n\nFui olhar o perfil e percebi que dá pra melhorar bastante isso. Nota abaixo de 4 afasta clientes antes mesmo de entrarem em contato.\n\nTrabalho com prestadores de serviço aqui em Curitiba ajudando a melhorar a presença online e atrair mais clientes com anúncios.\n\nPosso te mostrar um diagnóstico rápido e gratuito? Sem compromisso nenhum.`,
+      strategy: [
+        { label: 'Prioridade', value: '🔴 Alta — nota baixa afasta clientes ativamente' },
+        { label: 'Argumento de entrada', value: 'Mostrar quantos clientes vão pra concorrência' },
+        { label: 'Oferta ideal', value: '<strong>Site + Tráfego + Reputação</strong>' },
+        { label: 'Próximo passo', value: 'Diagnóstico gratuito — baixo atrito pra agendar' }
+      ]
+    };
+    if (rating < 4.2) return {
+      badge: '🟡 Lead Morno', badgeClass: 'badge-morno',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google com ${totalRatings} avaliações.\n\nTá indo bem, mas tem margem pra chegar nos 4.5+, onde os negócios aparecem mais nas buscas e atraem mais clientes.\n\nTrabalho com gestão de tráfego pago e sites pra prestadores de serviço aqui em Curitiba.\n\nTem interesse em ver como isso funcionaria pro seu negócio?`,
+      strategy: [
+        { label: 'Prioridade', value: '🟡 Média — tem potencial, não sente dor urgente' },
+        { label: 'Argumento de entrada', value: 'Crescimento e escala, não dor' },
+        { label: 'Oferta ideal', value: '<strong>Gestão de Tráfego + otimização do GBP</strong>' },
+        { label: 'Tom da abordagem', value: 'Oportunidade de crescimento' }
+      ]
+    };
+    if (rating < 4.6) return {
+      badge: '💚 Qualificado', badgeClass: 'badge-frio',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google — tá bem avaliado!\n\nPra quem tem uma reputação boa assim, anunciar no Google e Instagram costuma dar retorno muito acima da média, porque já tem a prova social pra converter.\n\nTrabalho com gestão de tráfego pago pra prestadores de serviço aqui em Curitiba. Posso fazer uma análise rápida do potencial do seu negócio?`,
+      strategy: [
+        { label: 'Prioridade', value: '💚 Qualificado — boa base pra tráfego pago' },
+        { label: 'Argumento de entrada', value: 'Boa reputação + anúncios = resultado acima da média' },
+        { label: 'Oferta ideal', value: '<strong>Gestão de Tráfego</strong> como foco principal' },
+        { label: 'Tom da abordagem', value: 'Escala e ROI' }
+      ]
+    };
+    return {
+      badge: '⭐ Top — Escalar', badgeClass: 'badge-frio',
+      pitch: `Oi, tudo bem? Vi que o ${name} tem ${rating.toFixed(1)} de nota no Google — impressionante!\n\nCom uma reputação assim, investir em anúncios pagos é quase garantia de retorno alto, porque a taxa de conversão é muito maior quando o negócio já tem credibilidade online.\n\nTrabalho com gestão de tráfego pago aqui em Curitiba. Posso te mostrar quanto daria pra crescer o faturamento com anúncios?`,
+      strategy: [
+        { label: 'Prioridade', value: '⭐ Alta — converte bem com proposta de escala' },
+        { label: 'Argumento de entrada', value: 'ROI alavancado pela reputação excelente' },
+        { label: 'Oferta ideal', value: '<strong>Meta Ads + Google Ads</strong> — foco em volume' },
+        { label: 'Tom da abordagem', value: 'Executivo, mostre números e potencial' }
+      ]
+    };
+  }
+
+  function copyPitch() {
+    navigator.clipboard.writeText(document.getElementById('pitchBox').textContent).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado!'; btn.className = 'btn-copy-sm copied';
+      setTimeout(() => { btn.textContent = 'Copiar mensagem'; btn.className = 'btn-copy-sm'; }, 2000);
+    });
+  }
+  function resetSearch() {
+    document.getElementById('businessInput').value = '';
+    hideResult(); hideError();
+    document.getElementById('btnNova').style.display = 'none';
+    document.getElementById('businessInput').focus();
+  }
+  function setLoading(on) {
+    document.getElementById('spinnerWrap').className = 'spinner-wrap' + (on ? ' show' : '');
+    document.getElementById('searchBtn').disabled = on;
+    document.getElementById('btnText').textContent = on ? 'Buscando...' : 'Buscar';
+  }
+  function showError(msg) { const el = document.getElementById('errorBox'); el.textContent = msg; el.className = 'error-box show'; }
+  function hideError() { document.getElementById('errorBox').className = 'error-box'; }
+  function hideResult() { document.getElementById('resultWrap').className = 'result-wrap'; }
+
+  loadApiKey();
+</script>
+</body>
+</html>
