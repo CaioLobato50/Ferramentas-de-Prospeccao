@@ -621,7 +621,8 @@
   }
 
   function analyzeRating(rating, totalRatings, name, website) {
-    const temSite = !!website;
+    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com'];
+const temSite = !!website && !dominiosFalsos.some(d => website.includes(d));
 
     if (!rating) {
       if (!temSite) return {
