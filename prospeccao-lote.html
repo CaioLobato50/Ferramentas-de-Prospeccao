@@ -61,7 +61,6 @@
   }
   .card-label::after { content: ''; flex: 1; height: 1px; background: var(--border-gold); opacity: 0.5; }
 
-  /* API KEY */
   .api-row { display: flex; gap: 10px; margin-bottom: 8px; }
   .api-row input {
     flex: 1; background: var(--navy-3); border: 1px solid var(--border);
@@ -74,7 +73,6 @@
   .api-link { font-size: 11px; color: var(--gold); text-decoration: none; opacity: 0.7; }
   .api-link:hover { opacity: 1; }
 
-  /* FILTROS */
   .filters-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
   @media(max-width: 640px) { .filters-grid { grid-template-columns: 1fr; } }
   .filter-group label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
@@ -93,7 +91,6 @@
   .check-group input[type=checkbox] { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; }
   .check-group:hover { color: var(--cream); }
 
-  /* BOTÕES */
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
   .btn {
     border: none; border-radius: 10px; padding: 13px 24px;
@@ -114,18 +111,15 @@
   }
   .btn-danger:hover { background: rgba(224,82,82,0.2); }
 
-  /* PROGRESS */
   .progress-wrap { display: none; margin-bottom: 20px; animation: fadeUp 0.3s ease; }
   .progress-wrap.show { display: block; }
   .progress-bar-bg { background: var(--navy-3); border-radius: 100px; height: 6px; overflow: hidden; margin-bottom: 8px; }
   .progress-bar-fill { height: 100%; background: var(--gold); border-radius: 100px; transition: width 0.3s ease; }
   .progress-text { font-size: 12px; color: var(--muted); }
 
-  /* ERROR */
   .error-box { background: var(--red-bg); border: 1px solid rgba(224,82,82,0.2); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 20px; display: none; }
   .error-box.show { display: block; animation: fadeUp 0.3s ease; }
 
-  /* RESULTADOS */
   .results-header {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
@@ -134,7 +128,6 @@
   .results-count strong { color: var(--cream); font-size: 18px; }
   .export-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
-  /* FILTRO RAPIDO */
   .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .ftab {
     padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
@@ -144,7 +137,6 @@
   .ftab:hover { border-color: var(--border-gold); color: var(--cream); }
   .ftab.active { background: rgba(201,169,110,0.15); border-color: var(--border-gold); color: var(--gold); }
 
-  /* TABELA */
   .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; min-width: 700px; }
   thead { background: var(--navy-3); }
@@ -175,6 +167,9 @@
   .chip-morno { background: var(--yellow-bg); color: var(--yellow); }
   .chip-frio { background: var(--green-bg); color: var(--green); }
   .chip-top { background: rgba(201,169,110,0.12); color: var(--gold); }
+  .chip-contatado { background: rgba(100,100,120,0.2); color: rgba(238,232,220,0.5); }
+  .contatado-tag { font-size: 10px; font-weight: 600; color: rgba(238,232,220,0.4); display: block; margin-top: 3px; }
+  tbody tr.ja-contatado { opacity: 0.6; }
   .td-action button {
     background: transparent; border: 1px solid var(--border-gold);
     border-radius: 6px; padding: 4px 10px; color: var(--gold);
@@ -183,12 +178,10 @@
   }
   .td-action button:hover { background: rgba(201,169,110,0.1); }
 
-  /* EMPTY */
   .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
   .empty-state .e-icon { font-size: 40px; margin-bottom: 12px; }
   .empty-state p { font-size: 14px; }
 
-  /* MODAL PITCH */
   .modal-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(13,27,46,0.85); z-index: 100;
@@ -331,6 +324,8 @@
       <button class="ftab" onclick="filterTab('frio', this)">💚 Qualificados</button>
       <button class="ftab" onclick="filterTab('top', this)">⭐ Top</button>
       <button class="ftab" onclick="filterTab('semsite', this)">⚠ Sem site</button>
+      <button class="ftab" onclick="filterTab('contatado', this)">✅ Já contatados</button>
+      <button class="ftab" onclick="limparHistorico()" style="color:var(--red);border-color:rgba(224,82,82,0.2)">🗑 Limpar histórico</button>
     </div>
 
     <div class="table-wrap">
@@ -364,6 +359,7 @@
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="copyModalPitch()">📋 Copiar mensagem</button>
       <button class="btn btn-outline" id="waBtn" onclick="openWA()" style="display:none">💬 Abrir WhatsApp</button>
+      <button class="btn btn-outline" id="gbmBtn" onclick="openGMB()" style="display:none">📍 Ver Google Meu Negócio</button>
     </div>
   </div>
 </div>
@@ -374,6 +370,33 @@
   let sortKey = 'rating';
   let sortDir = -1;
   let currentWALink = '';
+  let currentGMBLink = '';
+
+  // ─── HISTÓRICO DE CONTATADOS ───────────────────────────
+  function getContatados() {
+    try { return JSON.parse(localStorage.getItem('leads_contatados') || '{}'); } catch { return {}; }
+  }
+  function marcarContatado(phone, name) {
+    const c = getContatados();
+    const key = phone.replace(/\D/g,'');
+    c[key] = { name, data: new Date().toLocaleDateString('pt-BR'), ts: Date.now() };
+    localStorage.setItem('leads_contatados', JSON.stringify(c));
+  }
+  function isContatado(phone) {
+    if (!phone) return false;
+    const c = getContatados();
+    return !!c[phone.replace(/\D/g,'')];
+  }
+  function getDataContato(phone) {
+    if (!phone) return '';
+    const c = getContatados();
+    return c[phone.replace(/\D/g,'')]?.data || '';
+  }
+  function limparHistorico() {
+    if (!confirm('Limpar todo o histórico de leads já contatados?')) return;
+    localStorage.removeItem('leads_contatados');
+    applyFiltersAndRender();
+  }
 
   // ─── API KEY ───────────────────────────────────────────
   function saveApiKey() {
@@ -438,7 +461,8 @@
       if (!data.places?.length) throw new Error('Nenhum resultado encontrado. Tente outro segmento ou cidade.');
 
       showProgress(80, 'Processando leads...');
-      data.places.forEach(p => allLeads.push(parseLead(p)));
+      const cidade_atual = cidade;
+      data.places.forEach(p => allLeads.push(parseLead(p, cidade_atual)));
 
       showProgress(100, `${allLeads.length} leads encontrados!`);
       await sleep(500);
@@ -453,7 +477,7 @@
     }
   }
 
-  function parseLead(p) {
+  function parseLead(p, cidade) {
     const name = p.displayName?.text || '';
     const rating = p.rating || null;
     const totalRatings = p.userRatingCount || 0;
@@ -464,7 +488,7 @@
     const mapsUri = p.googleMapsUri || '';
     const status = p.businessStatus || '';
 
-    const { badge, badgeClass, chipClass, pitch } = analyzeRating(rating, totalRatings, name, website);
+    const { badge, badgeClass, chipClass, pitch } = analyzeRating(rating, totalRatings, name, website, cidade);
 
     return { name, rating, totalRatings, category, address, phone, website, mapsUri, status, badge, badgeClass, chipClass, pitch };
   }
@@ -476,19 +500,16 @@
 
     let leads = [...allLeads];
 
-    // Filtros de checkbox
-    if (filtroSemSite) leads = leads.filter(l => !l.website);
+    if (filtroSemSite) leads = leads.filter(l => !temSiteReal(l.website));
     if (filtroNotaBaixa) leads = leads.filter(l => l.rating && l.rating < 4.2);
-    if (!filtroSemNota) leads = leads; // incluir ou não sem nota — por padrão inclui tudo
 
-    // Filtro de tab
     if (activeFilter === 'quente') leads = leads.filter(l => l.badgeClass === 'badge-quente');
     else if (activeFilter === 'morno') leads = leads.filter(l => l.badgeClass === 'badge-morno');
     else if (activeFilter === 'frio') leads = leads.filter(l => l.badgeClass === 'badge-frio');
     else if (activeFilter === 'top') leads = leads.filter(l => l.badge.includes('Top'));
-    else if (activeFilter === 'semsite') leads = leads.filter(l => !l.website);
+    else if (activeFilter === 'semsite') leads = leads.filter(l => !temSiteReal(l.website));
+    else if (activeFilter === 'contatado') leads = leads.filter(l => isContatado(l.phone));
 
-    // Sort
     leads.sort((a, b) => {
       let va = a[sortKey], vb = b[sortKey];
       if (sortKey === 'rating') { va = va || 0; vb = vb || 0; }
@@ -517,7 +538,7 @@
       const phoneHtml = l.phone
         ? `<a href="https://wa.me/55${l.phone.replace(/\D/g,'')}" target="_blank">${l.phone}</a>`
         : '<span style="color:var(--muted);font-size:11px;">—</span>';
-      const siteHtml = l.website
+      const siteHtml = temSiteReal(l.website)
         ? `<a href="${l.website}" target="_blank">${l.website.replace(/https?:\/\/(www\.)?/,'').split('/')[0]}</a>`
         : '<span class="no-site-tag">⚠ Sem site</span>';
       const ratingHtml = l.rating
@@ -527,19 +548,21 @@
         ? `<a href="${l.mapsUri}" target="_blank">${l.name}</a>`
         : l.name;
 
-      return `<tr>
-        <td class="td-name">${nameHtml}</td>
+      const contatado = isContatado(l.phone);
+      const dataContato = getDataContato(l.phone);
+
+      return `<tr class="${contatado ? 'ja-contatado' : ''}">
+        <td class="td-name">${nameHtml}${contatado ? `<span class="contatado-tag">✅ Contatado em ${dataContato}</span>` : ''}</td>
         <td class="td-category">${l.category}</td>
         <td class="td-rating">${ratingHtml}<div class="td-reviews">${l.totalRatings > 0 ? l.totalRatings + ' avaliações' : ''}</div></td>
         <td></td>
         <td class="td-phone">${phoneHtml}</td>
         <td class="td-site">${siteHtml}</td>
-        <td><span class="lead-chip ${l.chipClass}">${l.badge}</span></td>
-        <td class="td-action"><button onclick="openPitch(${i})">Ver pitch</button></td>
+        <td><span class="lead-chip ${contatado ? 'chip-contatado' : l.chipClass}">${contatado ? '✅ Contatado' : l.badge}</span></td>
+        <td class="td-action"><button onclick="openPitch(${i})">${contatado ? 'Ver pitch' : 'Ver pitch'}</button></td>
       </tr>`;
     }).join('');
 
-    // Guarda leads filtrados pro pitch
     window._currentLeads = leads;
   }
 
@@ -557,12 +580,26 @@
       document.getElementById('waBtn').style.display = 'none';
     }
 
+    if (l.mapsUri) {
+      currentGMBLink = l.mapsUri;
+      document.getElementById('gbmBtn').style.display = 'inline-flex';
+    } else {
+      document.getElementById('gbmBtn').style.display = 'none';
+    }
+
     document.getElementById('modalOverlay').className = 'modal-overlay show';
   }
 
   function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalDirect(); }
   function closeModalDirect() { document.getElementById('modalOverlay').className = 'modal-overlay'; }
-  function openWA() { window.open(currentWALink, '_blank'); }
+  function openWA() {
+    const leads = window._currentLeads || [];
+    const l = leads.find(x => `https://wa.me/55${x.phone.replace(/\D/g,'')}` === currentWALink);
+    if (l) marcarContatado(l.phone, l.name);
+    window.open(currentWALink, '_blank');
+    applyFiltersAndRender();
+  }
+  function openGMB() { window.open(currentGMBLink, '_blank'); }
   function copyModalPitch() {
     navigator.clipboard.writeText(document.getElementById('modalPitch').textContent).then(() => {
       const btn = event.target;
@@ -612,6 +649,12 @@
   }
 
   // ─── HELPERS ──────────────────────────────────────────
+  function temSiteReal(website) {
+    if (!website) return false;
+    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com'];
+    return !dominiosFalsos.some(d => website.includes(d));
+  }
+
   function ratingColor(r) {
     if (!r) return 'var(--muted)';
     if (r < 3.5) return '#e05252';
@@ -620,61 +663,70 @@
     return '#3aaa6e';
   }
 
-  function analyzeRating(rating, totalRatings, name, website) {
-    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com'];
-const temSite = !!website && !dominiosFalsos.some(d => website.includes(d));
+  function analyzeRating(rating, totalRatings, name, website, cidade) {
+    const temSite = temSiteReal(website);
+    const poucasAvaliacoes = totalRatings > 0 && totalRatings < 15;
 
+    // ─── SEM NOTA ──────────────────────────────────────────
     if (!rating) {
       if (!temSite) return {
         badge: '🔥 Sem presença', badgeClass: 'badge-quente', chipClass: 'chip-quente',
-        pitch: `Oi, tudo bem?\n\nVi o perfil do ${name} no Google e notei duas coisas: ainda não tem avaliações e também não tem site.\n\nIsso significa que quando alguém pesquisa o serviço em Curitiba, você não aparece, e mesmo quem te acha pelo WhatsApp ou indicação não tem um lugar pra confirmar que você é confiável antes de fechar.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em Curitiba. Consigo resolver os dois pontos de forma rápida.\n\nQuer ver como ficaria?`
+        pitch: `Oi, tudo bem?\n\nVi o perfil do ${name} no Google e notei duas coisas: ainda não tem avaliações e também não tem site.\n\nIsso significa que quando alguém pesquisa o serviço em ${cidade}, você não aparece, e mesmo quem te acha pelo WhatsApp ou indicação não tem um lugar pra confirmar que você é confiável antes de fechar.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em ${cidade}. Consigo resolver os dois pontos de forma rápida.\n\nQuer ver como ficaria?`
       };
       return {
         badge: '🔥 Sem presença', badgeClass: 'badge-quente', chipClass: 'chip-quente',
-        pitch: `Oi, tudo bem?\n\nVi o perfil do ${name} no Google e notei que ainda não tem avaliações por lá.\n\nQuem pesquisa o serviço em Curitiba tende a escolher quem aparece com nota. Sem avaliação, você sai do radar antes mesmo de ser considerado.\n\nTrabalho com anúncios e presença no Google pra prestadores de serviço aqui em Curitiba. Consigo te mostrar como mudar isso rápido.\n\nQuer ver como funcionaria?`
+        pitch: `Oi, tudo bem?\n\nVi o perfil do ${name} no Google e notei que ainda não tem avaliações por lá.\n\nQuem pesquisa o serviço em ${cidade} tende a escolher quem aparece com nota. Sem avaliação, você sai do radar antes mesmo de ser considerado.\n\nTrabalho com anúncios e presença no Google pra prestadores de serviço aqui em ${cidade}. Consigo te mostrar como mudar isso rápido.\n\nQuer ver como funcionaria?`
       };
     }
 
+    // ─── NOTA BAIXA (abaixo de 3.5) ────────────────────────
     if (rating < 3.5) {
       if (!temSite) return {
         badge: '🔥 Quente', badgeClass: 'badge-quente', chipClass: 'chip-quente',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações, e também não tem site.\n\nNota abaixo de 4 já afasta cliente antes de entrar em contato. Sem site, o que sobrou pra ele decidir foi só essa nota.\n\nTrabalho com site e gestão de anúncios pra prestadores de serviço aqui em Curitiba. O site por si só já muda como o cliente te percebe antes de falar com você.\n\nPosso te mostrar como ficou o trabalho de outro prestador que tava na mesma situação?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações, e também não tem site.\n\nNota abaixo de 4 já afasta cliente antes de entrar em contato. Sem site, o que sobrou pra ele decidir foi só essa nota.\n\nTrabalho com site e gestão de anúncios pra prestadores de serviço aqui em ${cidade}. O site por si só já muda como o cliente te percebe antes de falar com você.\n\nPosso te mostrar como ficou o trabalho de outro prestador que tava na mesma situação?`
       };
       return {
         badge: '🔥 Quente', badgeClass: 'badge-quente', chipClass: 'chip-quente',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações.\n\nNota abaixo de 4 afasta cliente na hora. A maioria das pessoas filtra por avaliação antes mesmo de ligar, então você já perde o lead antes de ser considerado.\n\nTrabalho com presença online e anúncios pra prestadores de serviço aqui em Curitiba. Tenho casos de clientes que viraram esse jogo em pouco tempo.\n\nPosso te mostrar como funcionaria pro seu caso?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações.\n\nNota abaixo de 4 afasta cliente na hora. A maioria das pessoas filtra por avaliação antes mesmo de ligar, então você já perde o lead antes de ser considerado.\n\nTrabalho com presença online e anúncios pra prestadores de serviço aqui em ${cidade}. Tenho casos de clientes que viraram esse jogo em pouco tempo.\n\nPosso te mostrar como funcionaria pro seu caso?`
       };
     }
 
+    // ─── NOTA MÉDIA (3.5 a 4.2) ────────────────────────────
     if (rating < 4.2) {
       if (!temSite) return {
         badge: '🟡 Morno', badgeClass: 'badge-morno', chipClass: 'chip-morno',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, o que já é um bom começo.\n\nMas notei que não tem site. O que acontece é que o cliente te acha, gosta da nota, mas não tem um lugar pra ir. Sem página de contato ou portfólio, muita gente desiste e chama outro que tem.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em Curitiba. Com uma nota nessa faixa, dá pra crescer bastante com pouco investimento.\n\nQuer ver como ficaria?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, o que já é um bom começo.\n\nMas notei que não tem site. O que acontece é que o cliente te acha, gosta da nota, mas não tem um lugar pra ir. Sem página de contato ou portfólio, muita gente desiste e chama outro que tem.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em ${cidade}. Com uma nota nessa faixa, dá pra crescer bastante com pouco investimento.\n\nQuer ver como ficaria?`
       };
       return {
         badge: '🟡 Morno', badgeClass: 'badge-morno', chipClass: 'chip-morno',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações.\n\nTá indo bem, mas tem espaço pra chegar nos 4.5+, que é onde os negócios aparecem mais nas buscas e atraem cliente com mais frequência.\n\nTrabalho com anúncios e presença no Google pra prestadores de serviço aqui em Curitiba. Posso te mostrar o que faria diferença pro seu caso?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google com ${totalRatings} avaliações.\n\nTá indo bem, mas tem espaço pra chegar nos 4.5+, que é onde os negócios aparecem mais nas buscas e atraem cliente com mais frequência.\n\nTrabalho com anúncios e presença no Google pra prestadores de serviço aqui em ${cidade}. Posso te mostrar o que faria diferença pro seu caso?`
       };
     }
 
+    // ─── NOTA BOA (4.2 a 4.6) ──────────────────────────────
     if (rating < 4.6) {
       if (!temSite) return {
         badge: '💚 Qualificado', badgeClass: 'badge-frio', chipClass: 'chip-frio',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, o que já passa confiança pro cliente.\n\nSó que notei que não tem site. O que acontece é que o cliente pesquisa, vê a nota, quer saber mais, e não tem um lugar pra ir. Sem site ou landing page, ele fecha o Google e chama outro que tem.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em Curitiba. Com essa nota, o retorno com anúncio vem mais rápido porque o cliente já chega confiando.\n\nPosso te mostrar como ficou o trabalho de um cliente parecido com o seu caso?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, o que já passa confiança pro cliente.\n\nSó que notei que não tem site. O que acontece é que o cliente pesquisa, vê a nota, quer saber mais, e não tem um lugar pra ir. Sem site ou landing page, ele fecha o Google e chama outro que tem.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em ${cidade}. Com essa nota, o retorno com anúncio vem mais rápido porque o cliente já chega confiando.\n\nPosso te mostrar como ficou o trabalho de um cliente parecido com o seu caso?`
       };
       return {
         badge: '💚 Qualificado', badgeClass: 'badge-frio', chipClass: 'chip-frio',
-        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, bem avaliado.\n\nPra quem já tem uma reputação boa assim, anunciar no Google e Instagram costuma converter muito acima da média, porque o cliente chega com a prova social feita.\n\nTrabalho com gestão de anúncios pra prestadores de serviço aqui em Curitiba. Posso te mostrar como isso funcionaria pro seu caso?`
+        pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, bem avaliado.\n\nPra quem já tem uma reputação boa assim, anunciar no Google e Instagram costuma converter muito acima da média, porque o cliente chega com a prova social feita.\n\nTrabalho com gestão de anúncios pra prestadores de serviço aqui em ${cidade}. Posso te mostrar como isso funcionaria pro seu caso?`
       };
     }
 
+    // ─── TOP (4.6+) ─────────────────────────────────────────
     if (!temSite) return {
       badge: '⭐ Top', badgeClass: 'badge-frio', chipClass: 'chip-top',
-      pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google. Poucos negócios chegam nisso.\n\nO que chamou atenção é que com uma nota dessa, você ainda não tem site. O cliente pesquisa, vê a nota, quer confirmar que é sério, e não tem um lugar pra ir. Isso faz você perder cliente que já estava pronto pra fechar.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em Curitiba. Com essa nota, o retorno vem mais rápido porque o cliente já chega confiando.\n\nPosso te mostrar como ficaria com o nome do seu negócio?`
+      pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google. Poucos negócios chegam nisso.\n\nO que chamou atenção é que com uma nota dessa, você ainda não tem site. O cliente pesquisa, vê a nota, quer confirmar que é sério, e não tem um lugar pra ir. Isso faz você perder cliente que já estava pronto pra fechar.\n\nTrabalho com site e anúncios pra prestadores de serviço aqui em ${cidade}. Com essa nota, o retorno vem mais rápido porque o cliente já chega confiando.\n\nPosso te mostrar como ficaria com o nome do seu negócio?`
+    };
+    if (poucasAvaliacoes) return {
+      badge: '⭐ Top', badgeClass: 'badge-frio', chipClass: 'chip-top',
+      pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google, o que é ótimo.\n\nSó que com ${totalRatings} avaliações, o cliente ainda hesita um pouco antes de fechar. Negócios com 30, 40 avaliações na mesma nota passam mais segurança e aparecem melhor nas buscas.\n\nTrabalho com anúncios e estratégia de presença no Google pra prestadores de serviço aqui em ${cidade}. Com uma nota dessa, dá pra escalar rápido.\n\nPosso te mostrar como funcionaria pro seu caso?`
     };
     return {
       badge: '⭐ Top', badgeClass: 'badge-frio', chipClass: 'chip-top',
-      pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google. Difícil chegar nisso.\n\nO problema é que quem pesquisa o serviço em Curitiba provavelmente nem te acha, porque sem anúncio você depende só de quem já te conhece ou te indica.\n\nCom uma nota dessa, anúncio converte muito mais fácil. O cliente já confia antes de falar com você.\n\nPosso te mostrar como isso funcionaria pro seu caso?`
+      pitch: `Oi, tudo bem?\n\nVi que o ${name} tem ${rating.toFixed(1)} no Google. Difícil chegar nisso.\n\nO problema é que quem pesquisa o serviço em ${cidade} provavelmente nem te acha, porque sem anúncio você depende só de quem já te conhece ou te indica.\n\nCom uma nota dessa, anúncio converte muito mais fácil. O cliente já confia antes de falar com você.\n\nPosso te mostrar como isso funcionaria pro seu caso?`
     };
   }
 
