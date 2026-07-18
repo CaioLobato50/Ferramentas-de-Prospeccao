@@ -37,6 +37,60 @@
   }
   .container { max-width: 960px; margin: 0 auto; position: relative; z-index: 1; }
 
+  /* ─── LOGIN ─────────────────────────────────────────── */
+  .login-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .login-screen::before {
+    content: ''; position: absolute; top: -30%; right: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,169,110,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .login-card {
+    background: var(--navy-2); border: 1px solid var(--border-gold);
+    border-radius: 18px; padding: 40px 36px; max-width: 400px; width: 100%;
+    position: relative; animation: fadeUp 0.5s ease both;
+  }
+  .login-card .badge { margin-bottom: 16px; }
+  .login-card h2 { font-family: 'DM Serif Display', serif; font-size: 28px; margin-bottom: 6px; }
+  .login-card h2 span { color: var(--gold); font-style: italic; }
+  .login-card .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 26px; line-height: 1.5; }
+  .login-field { margin-bottom: 14px; }
+  .login-field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+  .login-field input {
+    width: 100%; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 14px; color: var(--cream);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s;
+  }
+  .login-field input:focus { border-color: var(--gold); }
+  .login-error { display: none; background: var(--red-bg); border: 1px solid rgba(224,82,82,0.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--red); margin-bottom: 14px; }
+  .login-error.show { display: block; }
+  .login-btn { width: 100%; justify-content: center; margin-top: 6px; }
+  .login-loading { display: none; text-align: center; color: var(--muted); font-size: 13px; }
+
+  .app-shell { display: none; }
+  .app-shell.ready { display: block; }
+
+  .user-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+    animation: fadeUp 0.5s ease both;
+  }
+  .user-info { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+  .user-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .user-info strong { color: var(--cream); font-weight: 600; }
+  .logout-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 14px; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .logout-btn:hover { border-color: rgba(224,82,82,0.3); color: var(--red); }
+
   .header { margin-bottom: 40px; animation: fadeUp 0.5s ease both; }
   .badge {
     display: inline-flex; align-items: center; gap: 6px;
@@ -213,7 +267,40 @@
 </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="badge">Acesso Restrito</div>
+    <h2>Leads <span>Finder</span></h2>
+    <p class="login-sub">Entre com o e-mail e senha cadastrados para acessar a ferramenta de prospecção.</p>
+    <div class="login-error" id="loginError"></div>
+    <div id="loginForm">
+      <div class="login-field">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+    </div>
+    <div class="login-loading" id="loginLoading">Verificando acesso...</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app-shell" id="appShell">
 <div class="container">
+
+  <div class="user-bar">
+    <div class="user-info">
+      <span class="user-dot"></span>
+      Logado como <strong id="userEmail"></strong>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Sair</button>
+  </div>
 
   <div class="header">
     <div class="badge">Prospecção em Lote</div>
@@ -325,7 +412,6 @@
       <button class="ftab" onclick="filterTab('top', this)">⭐ Top</button>
       <button class="ftab" onclick="filterTab('semsite', this)">⚠ Sem site</button>
       <button class="ftab" onclick="filterTab('contatado', this)">✅ Já contatados</button>
-      <button class="ftab" onclick="limparHistorico()" style="color:var(--red);border-color:rgba(224,82,82,0.2)">🗑 Limpar histórico</button>
     </div>
 
     <div class="table-wrap">
@@ -348,6 +434,7 @@
   </div>
 
 </div>
+</div>
 
 <!-- MODAL PITCH -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
@@ -364,41 +451,126 @@
   </div>
 </div>
 
+<!-- FIREBASE (compat, funciona direto em HTML estático) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script>
-  let allLeads = [];
-  let activeFilter = 'todos';
-  let sortKey = 'rating';
-  let sortDir = -1;
-  let currentWALink = '';
-  let currentGMBLink = '';
+  // ─── FIREBASE INIT ─────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyCprXQ5RUnvDGkIrws76P8WKfeqzJQ62eg",
+    authDomain: "prospeccaoativa-c9b4e.firebaseapp.com",
+    projectId: "prospeccaoativa-c9b4e",
+    storageBucket: "prospeccaoativa-c9b4e.firebasestorage.app",
+    messagingSenderId: "513307316363",
+    appId: "1:513307316363:web:c8e723b30c96b3ad63c48e"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-  // ─── HISTÓRICO DE CONTATADOS ───────────────────────────
-  function getContatados() {
-    try { return JSON.parse(localStorage.getItem('leads_contatados') || '{}'); } catch { return {}; }
+  let currentUser = null;
+  let contatadosCache = {};   // { telefoneSemMascara: { name, contatadoPor, data } }
+  let unsubContatados = null;
+
+  // ─── AUTH ──────────────────────────────────────────────
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('userEmail').textContent = user.email;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appShell').className = 'app-shell ready';
+      startContatadosSync();
+    } else {
+      currentUser = null;
+      if (unsubContatados) { unsubContatados(); unsubContatados = null; }
+      contatadosCache = {};
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appShell').className = 'app-shell';
+    }
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.className = 'login-error';
+
+    if (!email || !pass) {
+      errEl.textContent = 'Preencha e-mail e senha.';
+      errEl.className = 'login-error show';
+      return;
+    }
+
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('loginLoading').style.display = 'block';
+
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (err) {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('loginLoading').style.display = 'none';
+      const map = {
+        'auth/invalid-credential': 'E-mail ou senha incorretos.',
+        'auth/user-not-found': 'E-mail ou senha incorretos.',
+        'auth/wrong-password': 'E-mail ou senha incorretos.',
+        'auth/invalid-email': 'E-mail inválido.',
+        'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos.',
+        'auth/network-request-failed': 'Falha de conexão. Verifique sua internet.'
+      };
+      errEl.textContent = map[err.code] || 'Não foi possível entrar. Tente novamente.';
+      errEl.className = 'login-error show';
+    }
   }
-  function marcarContatado(phone, name) {
-    const c = getContatados();
-    const key = phone.replace(/\D/g,'');
-    c[key] = { name, data: new Date().toLocaleDateString('pt-BR'), ts: Date.now() };
-    localStorage.setItem('leads_contatados', JSON.stringify(c));
+
+  document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  function doLogout() { auth.signOut(); }
+
+  // ─── HISTÓRICO COMPARTILHADO (FIRESTORE) ───────────────
+  function startContatadosSync() {
+    if (unsubContatados) unsubContatados();
+    unsubContatados = db.collection('contatados').onSnapshot(snap => {
+      contatadosCache = {};
+      snap.forEach(doc => { contatadosCache[doc.id] = doc.data(); });
+      if (window._currentLeads) applyFiltersAndRender();
+    }, err => {
+      console.error('Erro ao sincronizar contatados:', err);
+    });
   }
+
+  function phoneKey(phone) { return (phone || '').replace(/\D/g, ''); }
+
+  async function marcarContatado(phone, name) {
+    const key = phoneKey(phone);
+    if (!key || !currentUser) return;
+    const registro = {
+      name: name || '',
+      phone: phone || '',
+      contatadoPor: currentUser.email,
+      data: new Date().toLocaleDateString('pt-BR'),
+      ts: Date.now()
+    };
+    contatadosCache[key] = registro; // atualização otimista
+    try {
+      await db.collection('contatados').doc(key).set(registro);
+    } catch (err) {
+      console.error('Erro ao salvar contato:', err);
+    }
+  }
+
   function isContatado(phone) {
-    if (!phone) return false;
-    const c = getContatados();
-    return !!c[phone.replace(/\D/g,'')];
+    const key = phoneKey(phone);
+    return key ? !!contatadosCache[key] : false;
   }
-  function getDataContato(phone) {
-    if (!phone) return '';
-    const c = getContatados();
-    return c[phone.replace(/\D/g,'')]?.data || '';
-  }
-  function limparHistorico() {
-    if (!confirm('Limpar todo o histórico de leads já contatados?')) return;
-    localStorage.removeItem('leads_contatados');
-    applyFiltersAndRender();
+  function getInfoContato(phone) {
+    const key = phoneKey(phone);
+    return key ? (contatadosCache[key] || null) : null;
   }
 
-  // ─── API KEY ───────────────────────────────────────────
+  // ─── API KEY (por navegador) ───────────────────────────
   function saveApiKey() {
     const k = document.getElementById('apiKeyInput').value.trim();
     if (!k) { showApiStatus('Cole a chave antes de salvar', false); return; }
@@ -421,6 +593,13 @@
   }
 
   // ─── SEARCH ───────────────────────────────────────────
+  let allLeads = [];
+  let activeFilter = 'todos';
+  let sortKey = 'rating';
+  let sortDir = -1;
+  let currentWALink = '';
+  let currentGMBLink = '';
+
   async function startSearch() {
     const apiKey = getApiKey();
     if (!apiKey) { showError('Cole e salve sua Google Places API Key.'); return; }
@@ -496,7 +675,6 @@
   function applyFiltersAndRender() {
     const filtroSemSite = document.getElementById('filtroSemSite').checked;
     const filtroNotaBaixa = document.getElementById('filtroNotaBaixa').checked;
-    const filtroSemNota = document.getElementById('filtroSemNota').checked;
 
     let leads = [...allLeads];
 
@@ -549,17 +727,18 @@
         : l.name;
 
       const contatado = isContatado(l.phone);
-      const dataContato = getDataContato(l.phone);
+      const info = getInfoContato(l.phone);
+      const quemContatou = info ? `${info.contatadoPor ? info.contatadoPor.split('@')[0] : ''} em ${info.data || ''}` : '';
 
       return `<tr class="${contatado ? 'ja-contatado' : ''}">
-        <td class="td-name">${nameHtml}${contatado ? `<span class="contatado-tag">✅ Contatado em ${dataContato}</span>` : ''}</td>
+        <td class="td-name">${nameHtml}${contatado ? `<span class="contatado-tag">✅ Contatado por ${quemContatou}</span>` : ''}</td>
         <td class="td-category">${l.category}</td>
         <td class="td-rating">${ratingHtml}<div class="td-reviews">${l.totalRatings > 0 ? l.totalRatings + ' avaliações' : ''}</div></td>
         <td></td>
         <td class="td-phone">${phoneHtml}</td>
         <td class="td-site">${siteHtml}</td>
         <td><span class="lead-chip ${contatado ? 'chip-contatado' : l.chipClass}">${contatado ? '✅ Contatado' : l.badge}</span></td>
-        <td class="td-action"><button onclick="openPitch(${i})">${contatado ? 'Ver pitch' : 'Ver pitch'}</button></td>
+        <td class="td-action"><button onclick="openPitch(${i})">Ver pitch</button></td>
       </tr>`;
     }).join('');
 
@@ -594,7 +773,7 @@
   function closeModalDirect() { document.getElementById('modalOverlay').className = 'modal-overlay'; }
   function openWA() {
     const leads = window._currentLeads || [];
-    const l = leads.find(x => `https://wa.me/55${x.phone.replace(/\D/g,'')}` === currentWALink);
+    const l = leads.find(x => x.phone && `https://wa.me/55${x.phone.replace(/\D/g,'')}` === currentWALink);
     if (l) marcarContatado(l.phone, l.name);
     window.open(currentWALink, '_blank');
     applyFiltersAndRender();
@@ -625,13 +804,15 @@
 
   function exportCSV() {
     const leads = window._currentLeads || allLeads;
-    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação']];
+    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação', 'Contatado por']];
     leads.forEach(l => {
+      const info = getInfoContato(l.phone);
       rows.push([
         l.name, l.category,
         l.rating ? l.rating.toFixed(1) : '',
         l.totalRatings,
-        l.phone, l.website, l.address, l.mapsUri, l.badge
+        l.phone, l.website, l.address, l.mapsUri, l.badge,
+        info ? `${info.contatadoPor} (${info.data})` : ''
       ]);
     });
     const csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
