@@ -444,7 +444,7 @@
     <div class="modal-sub" id="modalSub"></div>
     <div class="modal-pitch" id="modalPitch"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="copyModalPitch()">📋 Copiar mensagem</button>
+      <button class="btn btn-primary" onclick="copyModalPitch(this)">📋 Copiar mensagem</button>
       <button class="btn btn-outline" id="waBtn" onclick="openWA()" style="display:none">💬 Abrir WhatsApp</button>
       <button class="btn btn-outline" id="gbmBtn" onclick="openGMB()" style="display:none">📍 Ver Google Meu Negócio</button>
     </div>
@@ -779,9 +779,8 @@
     applyFiltersAndRender();
   }
   function openGMB() { window.open(currentGMBLink, '_blank'); }
-  function copyModalPitch() {
+  function copyModalPitch(btn) {
     navigator.clipboard.writeText(document.getElementById('modalPitch').textContent).then(() => {
-      const btn = event.target;
       btn.textContent = '✓ Copiado!';
       setTimeout(() => btn.textContent = '📋 Copiar mensagem', 2000);
     });
