@@ -718,7 +718,7 @@
     const notaTxt = l.rating ? l.rating.toFixed(1) : null;
 
     const abertura = temAvaliacoes
-      ? `Vi o perfil do ${nome} no Google — ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
+      ? `Vi o perfil do ${nome} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
       : `Vi o perfil do ${nome} no Google.`;
 
     let gatilho;
@@ -727,14 +727,14 @@
     } else if (l.tier === 'top') {
       gatilho = `Isso é sinal de bastante gente procurando vocês toda semana. A pergunta que fica: hoje dá pra saber quantos desses contatos viram consulta marcada, ou ainda é tudo no boca a boca e na memória da recepção?`;
     } else if (l.tier === 'quente') {
-      gatilho = `Isso mostra que o fluxo de pacientes já é sólido. A dúvida que fica é: esse fluxo hoje passa por um processo — CRM, funil, indicadores — ou ainda depende do improviso do dia a dia?`;
+      gatilho = `Isso mostra que o fluxo de pacientes já é sólido. A dúvida que fica é: esse fluxo hoje passa por um processo (CRM, funil, indicadores) ou ainda depende do improviso do dia a dia?`;
     } else if (l.tier === 'frio') {
       gatilho = `Vocês estão numa fase boa de crescimento. Esse é justamente o momento em que estruturar o processo comercial antes de escalar evita perder oportunidade lá na frente.`;
     } else {
-      gatilho = `Queria entender melhor como está o processo comercial de vocês hoje — como os contatos chegam e como são acompanhados até virar consulta.`;
+      gatilho = `Queria entender melhor como está o processo comercial de vocês hoje: como os contatos chegam e como são acompanhados até virar consulta.`;
     }
 
-    const fechamento = `Trabalho com a Bcore Conecta, ajudando clínicas e negócios de venda consultiva a estruturar processo comercial, CRM e indicadores pra não depender do improviso. Fazemos um Diagnóstico Comercial gratuito pra mapear onde estão os principais gargalos.\n\nFaz sentido eu te mandar mais informações?`;
+    const fechamento = `Trabalho com a Bcore Conecta (https://bcoreconecta.com.br/), ajudando clínicas e negócios de venda consultiva a estruturar processo comercial, CRM e indicadores pra não depender do improviso. Fazemos um Diagnóstico Comercial gratuito pra mapear onde estão os principais gargalos.\n\nFaz sentido eu te mandar mais informações?`;
 
     return `Oi, tudo bem?\n\n${abertura} ${gatilho}\n\n${fechamento}`;
   }
