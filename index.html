@@ -770,20 +770,39 @@
   }
 
   // ─── PITCH — RESTAURANTES / DELIVERY (fecha na atuação pessoal, não Bcore) ─
-  // Fork pelo campo website: sem site = oferta de cardápio digital próprio;
-  // com site = oferta de tráfego pago direto pro cardápio que já existe.
+  // Fork em 3 vias pelo campo website:
+  // - sem_site: nenhum canal próprio, só Google/Instagram/Facebook
+  // - link_in_bio: página tipo Linktree/Beacons reunindo reserva, iFood, WhatsApp
+  //   (tem estrutura organizada, mas nenhum canal próprio de pedido/venda)
+  // - site_proprio: site ou cardápio digital de verdade
+  const DOMINIOS_LINK_IN_BIO = ['linktr.ee', 'linktree.com', 'beacons.ai', 'taplink.cc', 'bio.link', 'allmylinks.com', 'msha.ke'];
+  const DOMINIOS_MARKETPLACE_DELIVERY = ['ifood.com.br', 'rappi.com.br', 'rappi.com', 'ubereats.com', 'aiqfome.com', '99food.com.br'];
+
+  function tipoCanalFood(website) {
+    if (!website) return 'sem_site';
+    const w = website.toLowerCase();
+    if (DOMINIOS_MARKETPLACE_DELIVERY.some(d => w.includes(d))) return 'so_marketplace';
+    if (DOMINIOS_LINK_IN_BIO.some(d => w.includes(d))) return 'link_in_bio';
+    if (!temSiteReal(website)) return 'sem_site'; // wa.me, instagram, facebook direto (sem hub)
+    return 'site_proprio';
+  }
+
   function gerarPitchFood(l, cidade) {
     const nome = l.name;
     const temAvaliacoes = l.totalRatings > 0;
     const notaTxt = l.rating ? l.rating.toFixed(1) : null;
-    const temSite = temSiteReal(l.website);
+    const canal = tipoCanalFood(l.website);
 
     const abertura = temAvaliacoes
       ? `Vi o perfil do ${nome} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
       : `Vi o perfil do ${nome} no Google.`;
 
     let corpo;
-    if (!temSite) {
+    if (canal === 'so_marketplace') {
+      corpo = `Reparei que o link do perfil de vocês no Google vai direto pro iFood. Hoje é só por lá que dá pra fazer pedido? Cada pedido que passa pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, mantendo o iFood se vocês quiserem, mas abrindo um canal paralelo com margem cheia e o contato do cliente na mão de vocês.`;
+    } else if (canal === 'link_in_bio') {
+      corpo = `Vi que vocês já têm um canal organizado, reserva, iFood e WhatsApp reunidos ali, mas reparei que o pedido de delivery ainda passa pelo iFood. Cada pedido que sai por lá tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta.\n\nDá pra manter essa estrutura e ainda abrir um canal de pedido direto pelo WhatsApp, pra parte desses pedidos ficar com margem cheia e o contato do cliente na mão de vocês.`;
+    } else if (canal === 'sem_site') {
       corpo = `Hoje vocês têm cardápio digital próprio ou é só pelo iFood/Rappi? Pergunto porque cada pedido que passa só pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta depois.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, e cada pedido nesse canal fica com o contato do cliente, pra vocês trazerem ele de volta depois em vez de começar do zero todo mês.`;
     } else {
       corpo = `Reparei que vocês já têm cardápio digital. Hoje o tráfego pra esse cardápio vem de onde, só orgânico ou tem campanha rodando? Se for só orgânico, dá pra trazer cliente direto pra esse canal com anúncio pago, tirando peso do iFood, que come de 15 a 27% em comissão, e ficando com o contato de quem comprou pra gerar recompra depois.`;
@@ -952,7 +971,7 @@
   // ─── HELPERS ──────────────────────────────────────────
   function temSiteReal(website) {
     if (!website) return false;
-    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com'];
+    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com', 'ifood.com.br', 'rappi.com.br', 'rappi.com', 'ubereats.com', 'aiqfome.com', '99food.com.br'];
     return !dominiosFalsos.some(d => website.includes(d));
   }
 
