@@ -345,6 +345,16 @@
             <option value="estúdio de pilates">Estúdio de Pilates</option>
             <option value="academia personal trainer">Academia / Personal de Alto Padrão</option>
           </optgroup>
+          <optgroup label="Restaurantes e delivery">
+            <option value="restaurante">Restaurante</option>
+            <option value="hamburgueria">Hamburgueria</option>
+            <option value="pizzaria">Pizzaria</option>
+            <option value="lanchonete">Lanchonete</option>
+            <option value="marmitaria">Marmitaria</option>
+            <option value="açaiteria">Açaiteria</option>
+            <option value="restaurante delivery">Restaurante Delivery</option>
+            <option value="cozinha japonesa delivery">Cozinha Japonesa Delivery</option>
+          </optgroup>
           <option value="outro">Outro (digitar abaixo)</option>
         </select>
       </div>
@@ -641,7 +651,7 @@
       data.places.forEach(p => allLeads.push(parseLead(p, cidade_atual)));
 
       showProgress(90, 'Classificando leads pelo volume de avaliações...');
-      classificarLote(allLeads, cidade_atual);
+      classificarLote(allLeads, cidade_atual, segmento);
 
       showProgress(100, `${allLeads.length} leads encontrados!`);
       await sleep(500);
@@ -685,26 +695,46 @@
     morno:  { badge: '🟡 Morno',       chipClass: 'chip-morno' }
   };
 
-  function classificarLote(leads, cidade) {
+  const SEGMENTOS_FOOD = [
+    'restaurante', 'hamburgueria', 'pizzaria', 'lanchonete',
+    'marmitaria', 'açaiteria', 'delivery de comida', 'cozinha japonesa delivery'
+  ];
+  function isSegmentoFood(segmento) {
+    const s = (segmento || '').toLowerCase();
+    return SEGMENTOS_FOOD.some(t => s.includes(t));
+  }
+
+  function classificarLote(leads, cidade, segmento) {
+    const isFood = isSegmentoFood(segmento);
+
     // percentil de avaliações dentro do próprio lote (0 a 100)
     const ordenados = [...leads].sort((a, b) => (a.totalRatings || 0) - (b.totalRatings || 0));
     const n = ordenados.length;
     ordenados.forEach((l, i) => { l.percentil = n > 1 ? (i / (n - 1)) * 100 : 100; });
 
     leads.forEach(l => {
-      const tier = definirTier(l);
+      const tier = definirTier(l, isFood);
       const info = TIER_INFO[tier];
       l.tier = tier;
       l.badge = info.badge;
       l.chipClass = info.chipClass;
-      l.pitch = gerarPitch(l, cidade);
+      l.pitch = isFood ? gerarPitchFood(l, cidade) : gerarPitch(l, cidade);
     });
   }
 
-  function definirTier(l) {
+  function definirTier(l, isFood) {
     // Nota baixa conhecida = problema de atendimento/reputação, fora do
     // foco principal da Bcore (processo comercial) — nunca prioriza.
     if (l.rating && l.rating < 3.5) return 'morno';
+
+    // Restaurante/delivery sem site próprio é o sinal mais quente aqui,
+    // não neutro: prova que tem demanda (nota + avaliações) mas depende
+    // 100% de app de delivery pra vender, sangrando comissão em cada pedido.
+    if (isFood && !temSiteReal(l.website) && l.rating >= 4.0) {
+      const p = l.percentil ?? 0;
+      return p >= 70 ? 'top' : 'quente';
+    }
+
     const p = l.percentil ?? 0;
     if (p >= 85) return 'top';
     if (p >= 60) return 'quente';
@@ -737,6 +767,31 @@
     const fechamento = `Trabalho com a Bcore Conecta (https://bcoreconecta.com.br/), ajudando clínicas e negócios de venda consultiva a estruturar processo comercial, CRM e indicadores pra não depender do improviso. Fazemos um Diagnóstico Comercial gratuito pra mapear onde estão os principais gargalos.\n\nFaz sentido eu te mandar mais informações?`;
 
     return `Oi, tudo bem?\n\n${abertura} ${gatilho}\n\n${fechamento}`;
+  }
+
+  // ─── PITCH — RESTAURANTES / DELIVERY (fecha na atuação pessoal, não Bcore) ─
+  // Fork pelo campo website: sem site = oferta de cardápio digital próprio;
+  // com site = oferta de tráfego pago direto pro cardápio que já existe.
+  function gerarPitchFood(l, cidade) {
+    const nome = l.name;
+    const temAvaliacoes = l.totalRatings > 0;
+    const notaTxt = l.rating ? l.rating.toFixed(1) : null;
+    const temSite = temSiteReal(l.website);
+
+    const abertura = temAvaliacoes
+      ? `Vi o perfil do ${nome} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
+      : `Vi o perfil do ${nome} no Google.`;
+
+    let corpo;
+    if (!temSite) {
+      corpo = `Hoje vocês têm cardápio digital próprio ou é só pelo iFood/Rappi? Pergunto porque cada pedido que passa só pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta depois.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, e cada pedido nesse canal fica com o contato do cliente, pra vocês trazerem ele de volta depois em vez de começar do zero todo mês.`;
+    } else {
+      corpo = `Reparei que vocês já têm cardápio digital. Hoje o tráfego pra esse cardápio vem de onde, só orgânico ou tem campanha rodando? Se for só orgânico, dá pra trazer cliente direto pra esse canal com anúncio pago, tirando peso do iFood, que come de 15 a 27% em comissão, e ficando com o contato de quem comprou pra gerar recompra depois.`;
+    }
+
+    const fechamento = `Trabalho com tráfego pago e canal de vendas direto pra restaurante e delivery. Faz sentido eu te mostrar como funciona?`;
+
+    return `Oi, tudo bem?\n\n${abertura} ${corpo}\n\n${fechamento}`;
   }
 
   function applyFiltersAndRender() {
