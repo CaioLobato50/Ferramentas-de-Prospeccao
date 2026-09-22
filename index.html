@@ -774,7 +774,8 @@
   // - sem_site: nenhum canal próprio, só Google/Instagram/Facebook
   // - link_in_bio: página tipo Linktree/Beacons reunindo reserva, iFood, WhatsApp
   //   (tem estrutura organizada, mas nenhum canal próprio de pedido/venda)
-  // - site_proprio: site ou cardápio digital de verdade
+  // - site_proprio: tem domínio próprio, mas não dá pra saber se é loja/cardápio
+  //   com pedido online ou só site institucional; o pitch pergunta em vez de afirmar
   const DOMINIOS_LINK_IN_BIO = ['linktr.ee', 'linktree.com', 'beacons.ai', 'taplink.cc', 'bio.link', 'allmylinks.com', 'msha.ke'];
   const DOMINIOS_MARKETPLACE_DELIVERY = ['ifood.com.br', 'rappi.com.br', 'rappi.com', 'ubereats.com', 'aiqfome.com', '99food.com.br'];
 
@@ -805,7 +806,7 @@
     } else if (canal === 'sem_site') {
       corpo = `Hoje vocês têm cardápio digital próprio ou é só pelo iFood/Rappi? Pergunto porque cada pedido que passa só pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta depois.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, e cada pedido nesse canal fica com o contato do cliente, pra vocês trazerem ele de volta depois em vez de começar do zero todo mês.`;
     } else {
-      corpo = `Reparei que vocês já têm cardápio digital. Hoje o tráfego pra esse cardápio vem de onde, só orgânico ou tem campanha rodando? Se for só orgânico, dá pra trazer cliente direto pra esse canal com anúncio pago, tirando peso do iFood, que come de 15 a 27% em comissão, e ficando com o contato de quem comprou pra gerar recompra depois.`;
+      corpo = `Reparei que vocês têm site próprio. Hoje o que rola mais por ali, pedido ou reserva direto, ou é mais uma vitrine com fotos e informações? Se for mais vitrine, eu monto o cardápio digital com pedido pelo WhatsApp, sem depender de app de delivery ou plataforma de reserva. Se já tiver canal ativo, dá pra trazer cliente direto pra ele com tráfego pago, tirando peso de intermediário que fica com o contato de quem comprou.`;
     }
 
     const fechamento = `Trabalho com tráfego pago e canal de vendas direto pra restaurante e delivery. Faz sentido eu te mostrar como funciona?`;
