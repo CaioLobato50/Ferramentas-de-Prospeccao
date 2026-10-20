@@ -222,6 +222,12 @@
   .chip-frio { background: var(--green-bg); color: var(--green); }
   .chip-top { background: rgba(201,169,110,0.12); color: var(--gold); }
   .chip-contatado { background: rgba(100,100,120,0.2); color: rgba(238,232,220,0.5); }
+  .canal-chip { padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .canal-sem  { background: rgba(224,82,82,0.1);    color: var(--red); }
+  .canal-mkt  { background: rgba(212,160,32,0.12);  color: var(--yellow); }
+  .canal-bio  { background: rgba(212,160,32,0.12);  color: var(--yellow); }
+  .canal-card { background: rgba(58,170,110,0.12);  color: var(--green); }
+  .canal-site { background: rgba(238,232,220,0.06); color: var(--muted); }
   .contatado-tag { font-size: 10px; font-weight: 600; color: rgba(238,232,220,0.4); display: block; margin-top: 3px; }
   tbody tr.ja-contatado { opacity: 0.6; }
   .td-action button {
@@ -433,6 +439,15 @@
       <button class="ftab" onclick="filterTab('contatado', this)">✅ Já contatados</button>
     </div>
 
+    <div class="filter-tabs" style="margin-top:-6px">
+      <span class="pmode-hint" style="align-self:center;margin-right:4px">Canal:</span>
+      <button class="ftab active" onclick="filterCanal('todos', this)">Todos</button>
+      <button class="ftab" onclick="filterCanal('sem_site', this)">Sem canal próprio</button>
+      <button class="ftab" onclick="filterCanal('so_marketplace', this)">Só marketplace</button>
+      <button class="ftab" onclick="filterCanal('cardapio_proprio', this)">Cardápio próprio</button>
+      <button class="ftab" onclick="filterCanal('site_proprio', this)">Site próprio</button>
+    </div>
+
     <div class="table-wrap">
       <table id="leadsTable">
         <thead>
@@ -442,7 +457,8 @@
             <th onclick="sortBy('rating')">Nota ↕</th>
             <th onclick="sortBy('totalRatings')">Avaliações ↕</th>
             <th>Telefone</th>
-            <th>Site</th>
+            <th id="thSite">Site</th>
+            <th onclick="sortBy('canal')">Canal ↕</th>
             <th onclick="sortBy('lead')">Lead ↕</th>
             <th>Ação</th>
           </tr>
@@ -620,6 +636,7 @@
   // ─── SEARCH ───────────────────────────────────────────
   let allLeads = [];
   let activeFilter = 'todos';
+  let activeCanal = 'todos';
   let sortKey = 'totalRatings';
   let sortDir = -1;
   let currentWALink = '';
@@ -713,6 +730,14 @@
     morno:  { badge: '🟡 Morno',       chipClass: 'chip-morno' }
   };
 
+  const CANAL_INFO = {
+    sem_site:       { label: 'Sem canal próprio', chipClass: 'canal-sem' },
+    so_marketplace:   { label: 'Só marketplace',   chipClass: 'canal-mkt' },
+    cardapio_proprio: { label: 'Cardápio próprio', chipClass: 'canal-card' },
+    link_in_bio:    { label: 'Link na bio',       chipClass: 'canal-bio' },
+    site_proprio:   { label: 'Site próprio',      chipClass: 'canal-site' }
+  };
+
   const SEGMENTOS_FOOD = [
     'restaurante', 'hamburgueria', 'pizzaria', 'lanchonete',
     'marmitaria', 'açaiteria', 'delivery de comida', 'cozinha japonesa delivery'
@@ -722,8 +747,11 @@
     return SEGMENTOS_FOOD.some(t => s.includes(t));
   }
 
+  let loteIsFood = false;
+
   function classificarLote(leads, cidade, segmento) {
     const isFood = isSegmentoFood(segmento);
+    loteIsFood = isFood;
 
     // percentil de avaliações dentro do próprio lote (0 a 100)
     const ordenados = [...leads].sort((a, b) => (a.totalRatings || 0) - (b.totalRatings || 0));
@@ -737,25 +765,35 @@
       l.badge = info.badge;
       l.chipClass = info.chipClass;
       l.isFood = isFood;
+
+      // canal = eixo independente do tier; diz qual abordagem usar
+      l.canal = tipoCanalFood(l.website);
+      const ci = CANAL_INFO[l.canal];
+      l.canalLabel = ci.label;
+      l.canalClass = ci.chipClass;
+
       l.pitch = isFood ? gerarPitchFood(l, cidade) : gerarPitch(l, cidade);
       // versão enxuta só existe no segmento de comida (teste A/B de taxa de resposta)
       l.pitchCurto = isFood ? gerarPitchFoodCurto(l, cidade) : null;
     });
   }
 
+  // Mínimo de avaliações pra nota significar alguma coisa.
+  // Nota 5.0 com 1 avaliação é ruído, não qualidade.
+  const MIN_AVALIACOES = 5;
+
   function definirTier(l, isFood) {
-    // Nota baixa conhecida = problema de atendimento/reputação, fora do
-    // foco principal da Bcore (processo comercial) — nunca prioriza.
+    // Amostra pequena demais: não dá pra ler nem reputação nem fluxo.
+    if ((l.totalRatings || 0) < MIN_AVALIACOES) return 'morno';
+
+    // Nota baixa conhecida = problema de operação/reputação. Tráfego em cima
+    // disso só acelera reclamação — nunca prioriza.
     if (l.rating && l.rating < 3.5) return 'morno';
 
-    // Restaurante/delivery sem site próprio é o sinal mais quente aqui,
-    // não neutro: prova que tem demanda (nota + avaliações) mas depende
-    // 100% de app de delivery pra vender, sangrando comissão em cada pedido.
-    if (isFood && !temSiteReal(l.website) && l.rating >= 4.0) {
-      const p = l.percentil ?? 0;
-      return p >= 70 ? 'top' : 'quente';
-    }
-
+    // Daqui pra baixo o tier mede UMA coisa só: tamanho da oportunidade,
+    // pelo volume de avaliações relativo ao próprio lote. O tipo de canal
+    // (sem site, só marketplace, site próprio) NÃO entra aqui — ele vira
+    // coluna separada, porque define qual pitch usar, não se o lead vale.
     const p = l.percentil ?? 0;
     if (p >= 85) return 'top';
     if (p >= 60) return 'quente';
@@ -798,11 +836,20 @@
   // - site_proprio: tem domínio próprio, mas não dá pra saber se é loja/cardápio
   //   com pedido online ou só site institucional; o pitch pergunta em vez de afirmar
   const DOMINIOS_LINK_IN_BIO = ['linktr.ee', 'linktree.com', 'beacons.ai', 'taplink.cc', 'bio.link', 'allmylinks.com', 'msha.ke'];
-  const DOMINIOS_MARKETPLACE_DELIVERY = ['ifood.com.br', 'rappi.com.br', 'rappi.com', 'ubereats.com', 'aiqfome.com', '99food.com.br'];
+
+  // Casamos por FRAGMENTO, nao por dominio exato: as plataformas usam varios
+  // hosts e encurtadores (ifoodbr.onelink.me, rappi.app.link, etc). Se checar
+  // so 'ifood.com.br', um link de iFood encurtado passa como site proprio.
+  const DOMINIOS_MARKETPLACE_DELIVERY = ['ifood', 'rappi', 'ubereats', 'aiqfome', '99food', 'onelink.me', 'app.link'];
+
+  // Plataformas de CARDAPIO PROPRIO: o lead ja tem canal de pedido direto.
+  // A dor dele nao e comissao, e volume e recompra nesse canal.
+  const DOMINIOS_CARDAPIO_PROPRIO = ['anota.ai', 'anotai', 'goomer', 'deliverydireto', 'cardapioweb', 'saipos', 'neemo', 'abrahao.com', 'delivery.much', 'menudino', 'yooga'];
 
   function tipoCanalFood(website) {
     if (!website) return 'sem_site';
     const w = website.toLowerCase();
+    if (DOMINIOS_CARDAPIO_PROPRIO.some(d => w.includes(d))) return 'cardapio_proprio';
     if (DOMINIOS_MARKETPLACE_DELIVERY.some(d => w.includes(d))) return 'so_marketplace';
     if (DOMINIOS_LINK_IN_BIO.some(d => w.includes(d))) return 'link_in_bio';
     if (!temSiteReal(website)) return 'sem_site'; // wa.me, instagram, facebook direto (sem hub)
@@ -825,13 +872,19 @@
       corpo = `Reparei que o link do perfil de vocês no Google vai direto pro iFood. Hoje é só por lá que dá pra fazer pedido? Cada pedido que passa pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, mantendo o iFood se vocês quiserem, mas abrindo um canal paralelo com margem cheia e o contato do cliente na mão de vocês.`;
     } else if (canal === 'link_in_bio') {
       corpo = `Vi que vocês já têm um canal organizado, reserva, iFood e WhatsApp reunidos ali, mas reparei que o pedido de delivery ainda passa pelo iFood. Cada pedido que sai por lá tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta.\n\nDá pra manter essa estrutura e ainda abrir um canal de pedido direto pelo WhatsApp, pra parte desses pedidos ficar com margem cheia e o contato do cliente na mão de vocês.`;
+    } else if (canal === 'cardapio_proprio') {
+      corpo = `Vi que vocês já têm cardápio próprio pra receber pedido, não dependem só de app. Esse é o passo que a maioria aqui ainda não deu.\n\nA pergunta é quanto do movimento de vocês já passa por ele. Na prática o cardápio existe, mas o cliente não sabe, e por costume continua pedindo pelo app e deixando a comissão lá.\n\nEu trabalho justamente esse ponto: tráfego pago levando pedido direto pro cardápio de vocês, e a base de quem já pediu sendo usada pra trazer o cliente de volta, em vez de pagar de novo pra reconquistar o mesmo cliente todo mês.`;
     } else if (canal === 'sem_site') {
       corpo = `Hoje vocês têm cardápio digital próprio ou é só pelo iFood/Rappi? Pergunto porque cada pedido que passa só pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta depois.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, e cada pedido nesse canal fica com o contato do cliente, pra vocês trazerem ele de volta depois em vez de começar do zero todo mês.`;
     } else {
       corpo = `Reparei que vocês têm site próprio. Hoje o que rola mais por ali, pedido ou reserva direto, ou é mais uma vitrine com fotos e informações? Se for mais vitrine, eu monto o cardápio digital com pedido pelo WhatsApp, sem depender de app de delivery ou plataforma de reserva. Se já tiver canal ativo, dá pra trazer cliente direto pra ele com tráfego pago, tirando peso de intermediário que fica com o contato de quem comprou.`;
     }
 
-    const fechamento = `Trabalho com tráfego pago e canal de vendas direto pra restaurante e delivery. Faz sentido eu te mostrar como funciona?`;
+    // No ramo cardapio_proprio o corpo ja explica a atuacao, entao o fechamento
+    // so faz a pergunta, pra nao repetir "trafego pago" duas vezes na mesma msg.
+    const fechamento = canal === 'cardapio_proprio'
+      ? `Faz sentido eu te mostrar como funciona?`
+      : `Trabalho com tráfego pago e canal de vendas direto pra restaurante e delivery. Faz sentido eu te mostrar como funciona?`;
 
     return `Oi, tudo bem?\n\n${abertura} ${corpo}\n\n${fechamento}`;
   }
@@ -849,6 +902,8 @@
       pergunta = `Reparei que o link do perfil de vocês vai direto pro iFood.\n\nHoje dá pra pedir por algum canal de vocês também, ou sai tudo pelo app?`;
     } else if (canal === 'link_in_bio') {
       pergunta = `Vi que vocês reúnem reserva, iFood e WhatsApp num link só.\n\nHoje o pedido de delivery sai mais pelo iFood ou direto no WhatsApp de vocês?`;
+    } else if (canal === 'cardapio_proprio') {
+      pergunta = `Vi que vocês já têm cardápio próprio pra pedido.\n\nHoje quanto do movimento sai por ele e quanto ainda vai pelo iFood?`;
     } else if (canal === 'sem_site') {
       pergunta = `Hoje vocês têm cardápio digital próprio pra receber pedido, ou sai tudo pelo iFood/Rappi?`;
     } else {
@@ -873,9 +928,12 @@
     else if (activeFilter === 'top') leads = leads.filter(l => l.tier === 'top');
     else if (activeFilter === 'contatado') leads = leads.filter(l => isContatado(l.phone));
 
+    if (activeCanal !== 'todos') leads = leads.filter(l => l.canal === activeCanal);
+
     leads.sort((a, b) => {
       let va = a[sortKey], vb = b[sortKey];
       if (sortKey === 'rating' || sortKey === 'totalRatings') { va = va || 0; vb = vb || 0; }
+      if (sortKey === 'canal') { va = a.canalLabel || ''; vb = b.canalLabel || ''; }
       if (sortKey === 'name' || sortKey === 'category' || sortKey === 'lead') { va = va || ''; vb = vb || ''; }
       if (va < vb) return sortDir;
       if (va > vb) return -sortDir;
@@ -886,6 +944,7 @@
     const filtered = leads.length !== allLeads.length ? ` (${leads.length} exibidos)` : '';
     document.getElementById('filteredNote').textContent = filtered;
 
+    document.getElementById('thSite').textContent = loteIsFood ? 'Cardápio' : 'Site';
     renderTable(leads);
     document.getElementById('resultsSection').style.display = 'block';
     document.getElementById('clearBtn').style.display = 'inline-flex';
@@ -894,16 +953,17 @@
   function renderTable(leads) {
     const tbody = document.getElementById('leadsBody');
     if (!leads.length) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="e-icon">🔍</div><p>Nenhum lead encontrado com esses filtros.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="e-icon">🔍</div><p>Nenhum lead encontrado com esses filtros.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = leads.map((l, i) => {
       const phoneHtml = l.phone
         ? `<a href="https://wa.me/55${l.phone.replace(/\D/g,'')}" target="_blank">${l.phone}</a>`
         : '<span style="color:var(--muted);font-size:11px;">—</span>';
-      const siteHtml = temSiteReal(l.website)
+      const semCanalTxt = loteIsFood ? '— Sem cardápio' : '— Sem site';
+      const siteHtml = (l.website && l.canal !== 'sem_site')
         ? `<a href="${l.website}" target="_blank">${l.website.replace(/https?:\/\/(www\.)?/,'').split('/')[0]}</a>`
-        : '<span class="no-site-tag">— Sem site</span>';
+        : `<span class="no-site-tag">${semCanalTxt}</span>`;
       const ratingHtml = l.rating
         ? `<span class="td-rating" style="color:${ratingColor(l.rating)}">${l.rating.toFixed(1)}</span>`
         : '<span style="color:var(--muted)">—</span>';
@@ -922,6 +982,7 @@
         <td class="td-reviews">${l.totalRatings > 0 ? l.totalRatings : '—'}</td>
         <td class="td-phone">${phoneHtml}</td>
         <td class="td-site">${siteHtml}</td>
+        <td><span class="canal-chip ${l.canalClass}">${l.canalLabel}</span></td>
         <td><span class="lead-chip ${contatado ? 'chip-contatado' : l.chipClass}">${contatado ? '✅ Contatado' : l.badge}</span></td>
         <td class="td-action"><button onclick="openPitch(${i})">Ver pitch</button></td>
       </tr>`;
@@ -1002,7 +1063,15 @@
 
   function filterTab(tab, el) {
     activeFilter = tab;
-    document.querySelectorAll('.ftab').forEach(t => t.className = 'ftab');
+    // só reseta os botões da própria linha, pra não apagar o filtro de canal
+    el.parentNode.querySelectorAll('.ftab').forEach(t => t.className = 'ftab');
+    el.className = 'ftab active';
+    applyFiltersAndRender();
+  }
+
+  function filterCanal(canal, el) {
+    activeCanal = canal;
+    el.parentNode.querySelectorAll('.ftab').forEach(t => t.className = 'ftab');
     el.className = 'ftab active';
     applyFiltersAndRender();
   }
@@ -1017,14 +1086,14 @@
 
   function exportCSV() {
     const leads = window._currentLeads || allLeads;
-    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação', 'Contatado por', 'Versão do pitch']];
+    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Link', 'Canal', 'Endereço', 'Google Maps', 'Classificação', 'Contatado por', 'Versão do pitch']];
     leads.forEach(l => {
       const info = getInfoContato(l.phone);
       rows.push([
         l.name, l.category,
         l.rating ? l.rating.toFixed(1) : '',
         l.totalRatings,
-        l.phone, l.website, l.address, l.mapsUri, l.badge,
+        l.phone, l.website, l.canalLabel, l.address, l.mapsUri, l.badge,
         info ? `${info.contatadoPor} (${info.data})` : '',
         info ? (info.pitchModo || '') : ''
       ]);
