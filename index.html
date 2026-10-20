@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leads Finder — Bcore Conecta</title>
+<title>Leads Finder</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -263,6 +263,18 @@
   .modal-close:hover { color: var(--cream); }
   .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
+  /* ─── SELETOR DE VERSÃO DO PITCH (A/B) ───────────────── */
+  .pitch-modes { display: none; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .pitch-modes.show { display: flex; }
+  .pmode {
+    padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .pmode:hover { border-color: var(--border-gold); color: var(--cream); }
+  .pmode.active { background: rgba(201,169,110,0.15); border-color: var(--border-gold); color: var(--gold); }
+  .pmode-hint { font-size: 10px; color: var(--muted); margin-left: 2px; }
+
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
@@ -303,9 +315,9 @@
   </div>
 
   <div class="header">
-    <div class="badge">Prospecção em Lote · Bcore Conecta</div>
+    <div class="badge">Prospecção em Lote</div>
     <h1>Leads <span>Finder</span></h1>
-    <p class="subtitle">Busca clínicas e negócios de venda consultiva por segmento e cidade, qualifica pelo volume de avaliações (relativo à própria busca) e gera abordagem pronta pro Diagnóstico Comercial.</p>
+    <p class="subtitle">Busca negócios por segmento e cidade, qualifica pelo volume de avaliações (relativo à própria busca) e gera abordagem pronta pra prospecção.</p>
   </div>
 
   <!-- API KEY -->
@@ -449,6 +461,11 @@
     <button class="modal-close" onclick="closeModalDirect()">✕</button>
     <div class="modal-title" id="modalTitle"></div>
     <div class="modal-sub" id="modalSub"></div>
+    <div class="pitch-modes" id="pitchModes">
+      <button class="pmode" id="pmodeCompleta" onclick="setPitchModo('completa')">Versão completa</button>
+      <button class="pmode" id="pmodeCurta" onclick="setPitchModo('curta')">Versão curta</button>
+      <span class="pmode-hint">teste A/B</span>
+    </div>
     <div class="modal-pitch" id="modalPitch"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="copyModalPitch(this)">📋 Copiar mensagem</button>
@@ -550,7 +567,7 @@
 
   function phoneKey(phone) { return (phone || '').replace(/\D/g, ''); }
 
-  async function marcarContatado(phone, name) {
+  async function marcarContatado(phone, name, pitchModo) {
     const key = phoneKey(phone);
     if (!key || !currentUser) return;
     const registro = {
@@ -558,7 +575,8 @@
       phone: phone || '',
       contatadoPor: currentUser.email,
       data: new Date().toLocaleDateString('pt-BR'),
-      ts: Date.now()
+      ts: Date.now(),
+      pitchModo: pitchModo || ''   // registra qual versão do pitch foi usada (teste A/B)
     };
     contatadosCache[key] = registro; // atualização otimista
     try {
@@ -718,7 +736,10 @@
       l.tier = tier;
       l.badge = info.badge;
       l.chipClass = info.chipClass;
+      l.isFood = isFood;
       l.pitch = isFood ? gerarPitchFood(l, cidade) : gerarPitch(l, cidade);
+      // versão enxuta só existe no segmento de comida (teste A/B de taxa de resposta)
+      l.pitchCurto = isFood ? gerarPitchFoodCurto(l, cidade) : null;
     });
   }
 
@@ -788,15 +809,16 @@
     return 'site_proprio';
   }
 
-  function gerarPitchFood(l, cidade) {
-    const nome = l.name;
-    const temAvaliacoes = l.totalRatings > 0;
+  function aberturaFood(l) {
     const notaTxt = l.rating ? l.rating.toFixed(1) : null;
-    const canal = tipoCanalFood(l.website);
+    return l.totalRatings > 0
+      ? `Vi o perfil do ${l.name} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
+      : `Vi o perfil do ${l.name} no Google.`;
+  }
 
-    const abertura = temAvaliacoes
-      ? `Vi o perfil do ${nome} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}.`
-      : `Vi o perfil do ${nome} no Google.`;
+  function gerarPitchFood(l, cidade) {
+    const abertura = aberturaFood(l);
+    const canal = tipoCanalFood(l.website);
 
     let corpo;
     if (canal === 'so_marketplace') {
@@ -812,6 +834,28 @@
     const fechamento = `Trabalho com tráfego pago e canal de vendas direto pra restaurante e delivery. Faz sentido eu te mostrar como funciona?`;
 
     return `Oi, tudo bem?\n\n${abertura} ${corpo}\n\n${fechamento}`;
+  }
+
+  // ─── VERSÃO CURTA (teste A/B) ──────────────────────────
+  // Mesma leitura de canal, mas sem explicar a oferta e com UMA pergunta só,
+  // que faz o lead falar do próprio negócio. A explicação fica pro 2º turno,
+  // depois que ele responder no WhatsApp.
+  function gerarPitchFoodCurto(l, cidade) {
+    const abertura = aberturaFood(l);
+    const canal = tipoCanalFood(l.website);
+
+    let pergunta;
+    if (canal === 'so_marketplace') {
+      pergunta = `Reparei que o link do perfil de vocês vai direto pro iFood.\n\nHoje dá pra pedir por algum canal de vocês também, ou sai tudo pelo app?`;
+    } else if (canal === 'link_in_bio') {
+      pergunta = `Vi que vocês reúnem reserva, iFood e WhatsApp num link só.\n\nHoje o pedido de delivery sai mais pelo iFood ou direto no WhatsApp de vocês?`;
+    } else if (canal === 'sem_site') {
+      pergunta = `Hoje vocês têm cardápio digital próprio pra receber pedido, ou sai tudo pelo iFood/Rappi?`;
+    } else {
+      pergunta = `Reparei que vocês têm site próprio.\n\nHoje o site traz pedido direto ou é mais uma vitrine com fotos e informações?`;
+    }
+
+    return `Oi, tudo bem?\n\n${abertura}\n\n${pergunta}`;
   }
 
   function applyFiltersAndRender() {
@@ -872,10 +916,10 @@
       const quemContatou = info ? `${info.contatadoPor ? info.contatadoPor.split('@')[0] : ''} em ${info.data || ''}` : '';
 
       return `<tr class="${contatado ? 'ja-contatado' : ''}">
-        <td class="td-name">${nameHtml}${contatado ? `<span class="contatado-tag">✅ Contatado por ${quemContatou}</span>` : ''}</td>
+        <td class="td-name">${nameHtml}${contatado ? `<span class="contatado-tag">✅ Contatado por ${quemContatou}${info && info.pitchModo ? ' · pitch ' + info.pitchModo : ''}</span>` : ''}</td>
         <td class="td-category">${l.category}</td>
-        <td class="td-rating">${ratingHtml}<div class="td-reviews">${l.totalRatings > 0 ? l.totalRatings + ' avaliações' : ''}</div></td>
-        <td></td>
+        <td>${ratingHtml}</td>
+        <td class="td-reviews">${l.totalRatings > 0 ? l.totalRatings : '—'}</td>
         <td class="td-phone">${phoneHtml}</td>
         <td class="td-site">${siteHtml}</td>
         <td><span class="lead-chip ${contatado ? 'chip-contatado' : l.chipClass}">${contatado ? '✅ Contatado' : l.badge}</span></td>
@@ -886,12 +930,37 @@
     window._currentLeads = leads;
   }
 
+  // ─── MODAL / VERSÃO DO PITCH ───────────────────────────
+  let pitchModo = localStorage.getItem('pitch_modo') || 'completa';
+  let leadAberto = null;
+
+  function setPitchModo(modo) {
+    pitchModo = modo;
+    localStorage.setItem('pitch_modo', modo);
+    renderPitchAtual();
+  }
+
+  function renderPitchAtual() {
+    if (!leadAberto) return;
+    const temCurto = !!leadAberto.pitchCurto;
+    const modes = document.getElementById('pitchModes');
+    modes.className = temCurto ? 'pitch-modes show' : 'pitch-modes';
+
+    const usarCurto = temCurto && pitchModo === 'curta';
+    document.getElementById('modalPitch').textContent = usarCurto ? leadAberto.pitchCurto : leadAberto.pitch;
+
+    document.getElementById('pmodeCompleta').className = 'pmode' + (usarCurto ? '' : ' active');
+    document.getElementById('pmodeCurta').className = 'pmode' + (usarCurto ? ' active' : '');
+  }
+
   function openPitch(i) {
     const l = window._currentLeads[i];
     if (!l) return;
+    leadAberto = l;
+
     document.getElementById('modalTitle').textContent = l.name;
     document.getElementById('modalSub').textContent = l.category + (l.address ? ' • ' + l.address : '');
-    document.getElementById('modalPitch').textContent = l.pitch;
+    renderPitchAtual();
 
     if (l.phone) {
       currentWALink = `https://wa.me/55${l.phone.replace(/\D/g,'')}`;
@@ -912,10 +981,14 @@
 
   function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalDirect(); }
   function closeModalDirect() { document.getElementById('modalOverlay').className = 'modal-overlay'; }
+
   function openWA() {
-    const leads = window._currentLeads || [];
-    const l = leads.find(x => x.phone && `https://wa.me/55${x.phone.replace(/\D/g,'')}` === currentWALink);
-    if (l) marcarContatado(l.phone, l.name);
+    const l = leadAberto;
+    if (l) {
+      // registra qual versão foi usada, pra comparar taxa de resposta depois
+      const modoUsado = l.pitchCurto ? pitchModo : 'padrao';
+      marcarContatado(l.phone, l.name, modoUsado);
+    }
     window.open(currentWALink, '_blank');
     applyFiltersAndRender();
   }
@@ -944,7 +1017,7 @@
 
   function exportCSV() {
     const leads = window._currentLeads || allLeads;
-    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação', 'Contatado por']];
+    const rows = [['Nome', 'Categoria', 'Nota', 'Avaliações', 'Telefone', 'Site', 'Endereço', 'Google Maps', 'Classificação', 'Contatado por', 'Versão do pitch']];
     leads.forEach(l => {
       const info = getInfoContato(l.phone);
       rows.push([
@@ -952,7 +1025,8 @@
         l.rating ? l.rating.toFixed(1) : '',
         l.totalRatings,
         l.phone, l.website, l.address, l.mapsUri, l.badge,
-        info ? `${info.contatadoPor} (${info.data})` : ''
+        info ? `${info.contatadoPor} (${info.data})` : '',
+        info ? (info.pitchModo || '') : ''
       ]);
     });
     const csv = rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
