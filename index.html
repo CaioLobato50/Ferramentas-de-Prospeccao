@@ -983,27 +983,44 @@
   }
 
   // ─── VERSÃO CURTA (teste A/B) ──────────────────────────
-  // Mesma leitura de canal, mas sem explicar a oferta e com UMA pergunta só,
-  // que faz o lead falar do próprio negócio. A explicação fica pro 2º turno,
-  // depois que ele responder no WhatsApp.
+  // Identidade antes da pergunta. A curta anterior nao dizia quem estava
+  // falando: lead frio le pergunta de desconhecido como abordagem suspeita
+  // e nao responde. Aqui ele sabe quem fala e sobre o que, e a unica
+  // pergunta e sobre o negocio DELE. A oferta fica pro 2o turno, quando
+  // a resposta dele ja diz qual dor atacar.
   function gerarPitchFoodCurto(l, cidade) {
-    const abertura = aberturaFood(l);
     const canal = tipoCanalFood(l.website);
+    // Praca FIXA: a frase diz de onde EU falo, nao onde o lead esta. Puxar
+    // da busca faria a mensagem afirmar que sou da cidade do lead, o que e
+    // mentira e queima na primeira pergunta de follow-up.
+    const identidade = `Sou o Caio, trabalho com delivery e pedido direto pra restaurante aqui em Curitiba.`;
 
-    let pergunta;
+    const notaTxt = l.rating ? l.rating.toFixed(1) : null;
+    const credencial = l.totalRatings > 0
+      ? `Vi o perfil do ${l.name} no Google, ${l.totalRatings} avaliações${notaTxt ? ' e nota ' + notaTxt : ''}`
+      : `Vi o perfil do ${l.name} no Google`;
+
+    // observacao: o que da pra ver do canal dele, em uma oracao curta
+    // pergunta: uma so, respondida com um fato do negocio dele
+    let observacao, pergunta;
     if (canal === 'so_marketplace') {
-      pergunta = `Reparei que o link do perfil de vocês vai direto pro iFood.\n\nHoje dá pra pedir por algum canal de vocês também, ou sai tudo pelo app?`;
+      observacao = `e reparei que o link de vocês vai direto pro iFood`;
+      pergunta = `Hoje dá pra pedir por algum canal de vocês também, ou sai tudo pelo app?`;
     } else if (canal === 'link_in_bio') {
-      pergunta = `Vi que vocês reúnem reserva, iFood e WhatsApp num link só.\n\nHoje o pedido de delivery sai mais pelo iFood ou direto no WhatsApp de vocês?`;
+      observacao = `e vi que vocês reúnem os links num lugar só`;
+      pergunta = `Hoje o pedido de delivery sai mais pelo iFood ou direto no WhatsApp de vocês?`;
     } else if (canal === 'cardapio_proprio') {
-      pergunta = `Vi que vocês já têm cardápio próprio pra pedido.\n\nHoje quanto do movimento sai por ele e quanto ainda vai pelo iFood?`;
+      observacao = `e vi que vocês já têm cardápio próprio pra pedido`;
+      pergunta = `Hoje quanto do movimento sai por ele e quanto ainda vai pelo iFood?`;
     } else if (canal === 'sem_site') {
-      pergunta = `Hoje vocês têm cardápio digital próprio pra receber pedido, ou sai tudo pelo iFood/Rappi?`;
+      observacao = `e não achei um canal de pedido de vocês por lá`;
+      pergunta = `Hoje vocês têm cardápio digital próprio, ou sai tudo pelo iFood/Rappi?`;
     } else {
-      pergunta = `Reparei que vocês têm um link próprio no perfil.\n\nHoje ele traz pedido direto ou é mais cardápio e fotos?`;
+      observacao = `e reparei que vocês têm link próprio`;
+      pergunta = `Hoje ele traz pedido direto ou é mais cardápio e fotos?`;
     }
 
-    return `Oi, tudo bem?\n\n${abertura}\n\n${pergunta}`;
+    return `Oi, tudo bem?\n\n${identidade}\n\n${credencial}, ${observacao}. ${pergunta}`;
   }
 
   function applyFiltersAndRender() {
@@ -1085,12 +1102,23 @@
   }
 
   // ─── MODAL / VERSÃO DO PITCH ───────────────────────────
-  let pitchModo = localStorage.getItem('pitch_modo') || 'completa';
+  // A versao ALTERNA sozinha a cada lead aberto. Teste A/B que depende de
+  // lembrar de trocar no botao nao acontece: na pratica fica tudo na mesma
+  // versao e o teste nunca fecha. 'pitch_ultimo_auto' guarda so o rodizio;
+  // clique manual vale pro lead aberto e nao desalinha o proximo.
+  let pitchModo = 'completa';
   let leadAberto = null;
 
+  function proximoModoAuto() {
+    const ultimo = localStorage.getItem('pitch_ultimo_auto');
+    const proximo = ultimo === 'completa' ? 'curta' : 'completa';
+    localStorage.setItem('pitch_ultimo_auto', proximo);
+    return proximo;
+  }
+
   function setPitchModo(modo) {
+    // escolha manual: vale so pra este lead, nao mexe no rodizio
     pitchModo = modo;
-    localStorage.setItem('pitch_modo', modo);
     renderPitchAtual();
   }
 
@@ -1111,6 +1139,8 @@
     const l = window._currentLeads[i];
     if (!l) return;
     leadAberto = l;
+    // so alterna onde existem as duas versoes (segmento de comida)
+    pitchModo = l.pitchCurto ? proximoModoAuto() : 'completa';
 
     document.getElementById('modalTitle').textContent = l.name;
     document.getElementById('modalSub').textContent = l.category + (l.address ? ' • ' + l.address : '');
