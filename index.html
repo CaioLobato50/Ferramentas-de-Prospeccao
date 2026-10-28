@@ -283,6 +283,44 @@
   .pmode-hint { font-size: 10px; color: var(--muted); margin-left: 2px; }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── PAINEL DE CONTATADOS / RESPOSTAS ───────────────── */
+  .busca-contatado {
+    width: 100%; background: var(--navy-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--cream);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+    transition: border-color 0.2s; margin-bottom: 14px;
+  }
+  .busca-contatado:focus { border-color: var(--gold); }
+  .busca-contatado::placeholder { color: var(--muted); }
+
+  .ab-board { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .ab-card {
+    flex: 1; min-width: 150px; background: var(--navy-3);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  }
+  .ab-card.vencedor { border-color: var(--border-gold); background: rgba(201,169,110,0.07); }
+  .ab-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .ab-taxa { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; color: var(--gold); }
+  .ab-detalhe { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .ab-aviso { font-size: 11px; color: var(--muted); width: 100%; margin-top: 2px; }
+
+  .contato-row {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 11px 0; border-top: 1px solid var(--border);
+  }
+  .contato-main { flex: 1; min-width: 180px; }
+  .contato-nome { font-size: 13px; font-weight: 600; color: var(--cream); }
+  .contato-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .btn-resp {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 13px; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-resp:hover { border-color: var(--border-gold); color: var(--gold); }
+  .btn-resp.on { background: var(--green-bg); border-color: rgba(58,170,110,0.3); color: var(--green); }
+  .lista-vazia { text-align: center; padding: 34px 16px; color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -318,7 +356,10 @@
       <span class="user-dot"></span>
       Logado como <strong id="userEmail"></strong>
     </div>
-    <button class="logout-btn" onclick="doLogout()">Sair</button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="abrirContatados()">📇 Contatados / Respostas</button>
+      <button class="logout-btn" onclick="doLogout()">Sair</button>
+    </div>
   </div>
 
   <div class="header">
@@ -427,6 +468,7 @@
         <span id="filteredNote" style="margin-left:8px;font-size:12px;"></span>
       </div>
       <div class="export-row">
+        <button class="btn btn-outline" onclick="abrirContatados()">📇 Contatados / Respostas</button>
         <button class="btn btn-outline" onclick="exportCSV()">📥 Exportar CSV</button>
       </div>
     </div>
@@ -489,6 +531,31 @@
       <button class="btn btn-primary" onclick="copyModalPitch(this)">📋 Copiar mensagem</button>
       <button class="btn btn-outline" id="waBtn" onclick="openWA()" style="display:none">💬 Abrir WhatsApp</button>
       <button class="btn btn-outline" id="gbmBtn" onclick="openGMB()" style="display:none">📍 Ver Google Meu Negócio</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONTATADOS / RESPOSTAS -->
+<div class="modal-overlay" id="contatadosOverlay" onclick="fecharContatados(event)">
+  <div class="modal" style="max-width:820px">
+    <button class="modal-close" onclick="fecharContatadosDireto()">✕</button>
+    <div class="modal-title">Contatados e respostas</div>
+    <div class="modal-sub">Todo mundo que já recebeu abordagem, independente da busca. Marque quem respondeu pra fechar o teste A/B.</div>
+
+    <div class="ab-board" id="abBoard"></div>
+
+    <input type="text" class="busca-contatado" id="buscaContatado" placeholder="🔍 Buscar por nome ou telefone..." oninput="renderContatados()">
+
+    <div class="filter-tabs" style="margin-bottom:12px">
+      <button class="ftab active" onclick="filtrarContatados('todos', this)">Todos</button>
+      <button class="ftab" onclick="filtrarContatados('respondeu', this)">💬 Responderam</button>
+      <button class="ftab" onclick="filtrarContatados('sem_resposta', this)">Sem resposta</button>
+    </div>
+
+    <div id="listaContatados"></div>
+
+    <div class="modal-actions" style="margin-top:18px">
+      <button class="btn btn-outline" onclick="exportContatadosCSV()">📥 Exportar contatados (CSV)</button>
     </div>
   </div>
 </div>
@@ -578,6 +645,9 @@
       contatadosCache = {};
       snap.forEach(doc => { contatadosCache[doc.id] = doc.data(); });
       if (window._currentLeads) applyFiltersAndRender();
+      // se o painel de contatados estiver aberto, atualiza junto
+      const ov = document.getElementById('contatadosOverlay');
+      if (ov && ov.className.includes('show')) renderContatados();
     }, err => {
       console.error('Erro ao sincronizar contatados:', err);
     });
@@ -846,12 +916,33 @@
 
   // Plataformas de CARDAPIO PROPRIO: o lead ja tem canal de pedido direto.
   // A dor dele nao e comissao, e volume e recompra nesse canal.
-  const DOMINIOS_CARDAPIO_PROPRIO = ['anota.ai', 'anotai', 'goomer', 'deliverydireto', 'cardapioweb', 'saipos', 'neemo', 'abrahao.com', 'delivery.much', 'menudino', 'yooga'];
+  const DOMINIOS_CARDAPIO_PROPRIO = [
+    'anota.ai', 'anotai', 'goomer', 'deliverydireto', 'cardapioweb', 'saipos',
+    'neemo', 'abrahao.com', 'delivery.much', 'menudino', 'yooga', 'brendi',
+    'cardapio.me', 'cardapiodigital', 'ola.click', 'olaclick', 'kyte.site',
+    'mindchef', 'onpedido', 'pedidoja', 'instadelivery', 'programaentrega',
+    'gendai.com.br/cardapio', 'sischef', 'foodydelivery', 'ecletica.app'
+  ];
+
+  // Rede de seguranca: muito cardapio proprio roda em subdominio 'menu.' ou
+  // 'cardapio.' do dominio do proprio restaurante. Se o host comeca assim,
+  // e cardapio com pedido, nao site institucional, mesmo que a plataforma
+  // nao esteja na lista acima.
+  const PREFIXOS_CARDAPIO = ['menu.', 'cardapio.', 'pedido.', 'pedidos.', 'delivery.'];
+  function temPrefixoCardapio(website) {
+    try {
+      const host = new URL(website.startsWith('http') ? website : 'https://' + website).hostname.toLowerCase();
+      return PREFIXOS_CARDAPIO.some(p => host.startsWith(p));
+    } catch (e) {
+      return false;
+    }
+  }
 
   function tipoCanalFood(website) {
     if (!website) return 'sem_site';
     const w = website.toLowerCase();
     if (DOMINIOS_CARDAPIO_PROPRIO.some(d => w.includes(d))) return 'cardapio_proprio';
+    if (temPrefixoCardapio(w)) return 'cardapio_proprio';
     if (DOMINIOS_MARKETPLACE_DELIVERY.some(d => w.includes(d))) return 'so_marketplace';
     if (DOMINIOS_LINK_IN_BIO.some(d => w.includes(d))) return 'link_in_bio';
     if (!temSiteReal(website)) return 'sem_site'; // wa.me, instagram, facebook direto (sem hub)
@@ -1061,6 +1152,161 @@
       btn.textContent = '✓ Copiado!';
       setTimeout(() => btn.textContent = '📋 Copiar mensagem', 2000);
     });
+  }
+
+  // ─── PAINEL DE CONTATADOS / RESPOSTAS (teste A/B) ──────
+  // Le direto do contatadosCache (espelho do Firestore), nao da busca atual.
+  // Por isso da pra achar um lead contatado dias atras sem refazer a busca.
+  let filtroContatados = 'todos';
+
+  function abrirContatados() {
+    document.getElementById('contatadosOverlay').className = 'modal-overlay show';
+    renderContatados();
+  }
+  function fecharContatados(e) {
+    if (e.target === document.getElementById('contatadosOverlay')) fecharContatadosDireto();
+  }
+  function fecharContatadosDireto() {
+    document.getElementById('contatadosOverlay').className = 'modal-overlay';
+  }
+
+  function filtrarContatados(f, el) {
+    filtroContatados = f;
+    el.parentNode.querySelectorAll('.ftab').forEach(t => t.className = 'ftab');
+    el.className = 'ftab active';
+    renderContatados();
+  }
+
+  async function toggleRespondeu(key) {
+    const atual = contatadosCache[key];
+    if (!atual) return;
+    const novo = !atual.respondeu;
+    contatadosCache[key] = { ...atual, respondeu: novo, respondeuTs: novo ? Date.now() : null };
+    renderContatados();
+    try {
+      await db.collection('contatados').doc(key).update({
+        respondeu: novo,
+        respondeuTs: novo ? Date.now() : null
+      });
+    } catch (err) {
+      console.error('Erro ao marcar resposta:', err);
+    }
+  }
+
+  function listaContatadosOrdenada() {
+    return Object.entries(contatadosCache)
+      .map(([key, c]) => ({ key, ...c }))
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  }
+
+  // Taxa de resposta por versao do pitch. So conta quem recebeu completa ou
+  // curta: 'padrao' (segmentos fora de comida) nao entra no A/B.
+  function calcularAB() {
+    const base = { completa: { env: 0, resp: 0 }, curta: { env: 0, resp: 0 } };
+    listaContatadosOrdenada().forEach(c => {
+      const m = c.pitchModo;
+      if (m !== 'completa' && m !== 'curta') return;
+      base[m].env++;
+      if (c.respondeu) base[m].resp++;
+    });
+    return base;
+  }
+
+  function renderAB() {
+    const ab = calcularAB();
+    const taxa = v => v.env ? (v.resp / v.env) * 100 : 0;
+    const tC = taxa(ab.completa), tK = taxa(ab.curta);
+    const totalEnv = ab.completa.env + ab.curta.env;
+
+    // Abaixo de ~30 envios por versao, diferenca de taxa e ruido, nao resultado.
+    const MIN_AMOSTRA = 30;
+    const maduro = ab.completa.env >= MIN_AMOSTRA && ab.curta.env >= MIN_AMOSTRA;
+    const vencedor = !maduro ? null : (tC > tK ? 'completa' : (tK > tC ? 'curta' : null));
+
+    const card = (nome, chave, v, t) => `
+      <div class="ab-card ${vencedor === chave ? 'vencedor' : ''}">
+        <div class="ab-label">${nome}${vencedor === chave ? ' · vencendo' : ''}</div>
+        <div class="ab-taxa">${t.toFixed(1)}%</div>
+        <div class="ab-detalhe">${v.resp} respostas em ${v.env} envios</div>
+      </div>`;
+
+    let aviso;
+    if (totalEnv === 0) {
+      aviso = 'Nenhum pitch de comida enviado ainda. O A/B começa a contar no primeiro envio.';
+    } else if (!maduro) {
+      const faltaC = Math.max(0, MIN_AMOSTRA - ab.completa.env);
+      const faltaK = Math.max(0, MIN_AMOSTRA - ab.curta.env);
+      aviso = `Amostra pequena ainda. Faltam ${faltaC} envios na completa e ${faltaK} na curta pra diferença significar alguma coisa.`;
+    } else if (!vencedor) {
+      aviso = 'Empate técnico. As duas versões estão performando igual.';
+    } else {
+      aviso = `A versão ${vencedor} está à frente. Vale concentrar os envios nela e testar uma variação nova contra ela.`;
+    }
+
+    document.getElementById('abBoard').innerHTML =
+      card('Versão completa', 'completa', ab.completa, tC) +
+      card('Versão curta', 'curta', ab.curta, tK) +
+      `<div class="ab-aviso">${aviso}</div>`;
+  }
+
+  function renderContatados() {
+    renderAB();
+
+    const termo = (document.getElementById('buscaContatado').value || '').toLowerCase().trim();
+    const termoDigitos = termo.replace(/\D/g, '');
+
+    let lista = listaContatadosOrdenada();
+
+    if (filtroContatados === 'respondeu') lista = lista.filter(c => c.respondeu);
+    else if (filtroContatados === 'sem_resposta') lista = lista.filter(c => !c.respondeu);
+
+    if (termo) {
+      lista = lista.filter(c => {
+        const nomeOk = (c.name || '').toLowerCase().includes(termo);
+        const foneOk = termoDigitos && c.key.includes(termoDigitos);
+        return nomeOk || foneOk;
+      });
+    }
+
+    const el = document.getElementById('listaContatados');
+    if (!lista.length) {
+      el.innerHTML = `<div class="lista-vazia">Nenhum contato encontrado com esse filtro.</div>`;
+      return;
+    }
+
+    el.innerHTML = lista.map(c => {
+      const versao = c.pitchModo === 'completa' ? 'pitch completo'
+                   : c.pitchModo === 'curta' ? 'pitch curto'
+                   : 'pitch padrão';
+      const quem = c.contatadoPor ? c.contatadoPor.split('@')[0] : '';
+      const wa = c.phone ? `https://wa.me/55${String(c.phone).replace(/\D/g,'')}` : null;
+      return `<div class="contato-row">
+        <div class="contato-main">
+          <div class="contato-nome">${c.name || '(sem nome)'}</div>
+          <div class="contato-meta">${c.phone || 'sem telefone'} · ${versao} · ${c.data || ''}${quem ? ' · ' + quem : ''}</div>
+        </div>
+        ${wa ? `<a class="btn-resp" href="${wa}" target="_blank" style="text-decoration:none">💬 Abrir</a>` : ''}
+        <button class="btn-resp ${c.respondeu ? 'on' : ''}" onclick="toggleRespondeu('${c.key}')">
+          ${c.respondeu ? '✓ Respondeu' : 'Marcar resposta'}
+        </button>
+      </div>`;
+    }).join('');
+  }
+
+  function exportContatadosCSV() {
+    const rows = [['Nome', 'Telefone', 'Versão do pitch', 'Respondeu', 'Data do contato', 'Contatado por']];
+    listaContatadosOrdenada().forEach(c => {
+      rows.push([
+        c.name || '', c.phone || '', c.pitchModo || '',
+        c.respondeu ? 'Sim' : 'Não', c.data || '', c.contatadoPor || ''
+      ]);
+    });
+    const csv = rows.map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `contatados_${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   function filterTab(tab, el) {
