@@ -445,6 +445,7 @@
       <button class="ftab active" onclick="filterCanal('todos', this)">Todos</button>
       <button class="ftab" onclick="filterCanal('sem_site', this)">Sem canal próprio</button>
       <button class="ftab" onclick="filterCanal('so_marketplace', this)">Só marketplace</button>
+      <button class="ftab" onclick="filterCanal('link_in_bio', this)">Link na bio</button>
       <button class="ftab" onclick="filterCanal('cardapio_proprio', this)">Cardápio próprio</button>
       <button class="ftab" onclick="filterCanal('site_proprio', this)">Site próprio</button>
     </div>
@@ -878,7 +879,7 @@
     } else if (canal === 'sem_site') {
       corpo = `Hoje vocês têm cardápio digital próprio ou é só pelo iFood/Rappi? Pergunto porque cada pedido que passa só pelo app tira de 15 a 27% de comissão, e o cliente que comprou some, o restaurante nunca fica com o contato dele pra chamar de volta depois.\n\nEu monto o cardápio digital com pedido direto pelo WhatsApp, e cada pedido nesse canal fica com o contato do cliente, pra vocês trazerem ele de volta depois em vez de começar do zero todo mês.`;
     } else {
-      corpo = `Reparei que vocês têm site próprio. Hoje o que rola mais por ali, pedido ou reserva direto, ou é mais uma vitrine com fotos e informações? Se for mais vitrine, eu monto o cardápio digital com pedido pelo WhatsApp, sem depender de app de delivery ou plataforma de reserva. Se já tiver canal ativo, dá pra trazer cliente direto pra ele com tráfego pago, tirando peso de intermediário que fica com o contato de quem comprou.`;
+      corpo = `Reparei que vocês têm um link próprio no perfil. Hoje o que rola mais por ali, pedido direto, ou é mais uma vitrine com cardápio e fotos? Se for mais vitrine, eu monto o cardápio digital com pedido pelo WhatsApp, sem depender de app de delivery. Se já tiver canal de pedido ativo, dá pra trazer cliente direto pra ele com tráfego pago, tirando peso do intermediário que fica com o contato de quem comprou.`;
     }
 
     // No ramo cardapio_proprio o corpo ja explica a atuacao, entao o fechamento
@@ -908,7 +909,7 @@
     } else if (canal === 'sem_site') {
       pergunta = `Hoje vocês têm cardápio digital próprio pra receber pedido, ou sai tudo pelo iFood/Rappi?`;
     } else {
-      pergunta = `Reparei que vocês têm site próprio.\n\nHoje o site traz pedido direto ou é mais uma vitrine com fotos e informações?`;
+      pergunta = `Reparei que vocês têm um link próprio no perfil.\n\nHoje ele traz pedido direto ou é mais cardápio e fotos?`;
     }
 
     return `Oi, tudo bem?\n\n${abertura}\n\n${pergunta}`;
@@ -1116,8 +1117,11 @@
   // ─── HELPERS ──────────────────────────────────────────
   function temSiteReal(website) {
     if (!website) return false;
-    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com', 'ifood.com.br', 'rappi.com.br', 'rappi.com', 'ubereats.com', 'aiqfome.com', '99food.com.br'];
-    return !dominiosFalsos.some(d => website.includes(d));
+    const w = website.toLowerCase();
+    // Fragmentos, nao dominios exatos, pelo mesmo motivo da lista de marketplace:
+    // encurtadores e hosts alternativos passariam batido num match exato.
+    const dominiosFalsos = ['wa.me', 'api.whatsapp.com', 'instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com', 'ifood', 'rappi', 'ubereats', 'aiqfome', '99food', 'onelink.me', 'app.link'];
+    return !dominiosFalsos.some(d => w.includes(d));
   }
 
   function ratingColor(r) {
