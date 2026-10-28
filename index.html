@@ -1013,8 +1013,13 @@
       observacao = `e vi que vocês já têm cardápio próprio pra pedido`;
       pergunta = `Hoje quanto do movimento sai por ele e quanto ainda vai pelo iFood?`;
     } else if (canal === 'sem_site') {
-      observacao = `e não achei um canal de pedido de vocês por lá`;
-      pergunta = `Hoje vocês têm cardápio digital próprio, ou sai tudo pelo iFood/Rappi?`;
+      // NUNCA afirmar que o lead nao tem canal de pedido. A Places API nao
+      // expoe o link do Menu do perfil, so o websiteUri: restaurante que
+      // poe o cardapio (Anota Ai, etc) no campo Menu e deixa o site vazio
+      // cai aqui parecendo que nao tem nada. Afirmar isso e ser desmentido
+      // na primeira resposta, e a autoridade vai junto. So pergunta.
+      observacao = `e fiquei na dúvida de como vocês recebem pedido hoje`;
+      pergunta = `Vocês têm cardápio digital próprio, ou sai tudo pelo iFood/Rappi?`;
     } else {
       observacao = `e reparei que vocês têm link próprio`;
       pergunta = `Hoje ele traz pedido direto ou é mais cardápio e fotos?`;
